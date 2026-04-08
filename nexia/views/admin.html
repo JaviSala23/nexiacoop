@@ -28,6 +28,7 @@
     <div class="flex gap-4 mb-6 border-b border-gray-200">
         <button onclick="mostrarTab('params')"   id="tab-params"   class="pb-3 px-1 text-blue-700 border-b-2 border-blue-700 font-medium text-sm">Parametros</button>
         <button onclick="mostrarTab('usuarios')" id="tab-usuarios" class="pb-3 px-1 text-gray-500 hover:text-gray-700 text-sm">Usuarios</button>
+        <button onclick="mostrarTab('cursos')"   id="tab-cursos"   class="pb-3 px-1 text-gray-500 hover:text-gray-700 text-sm">Cursos</button>
     </div>
 
     <!-- Parametros -->
@@ -83,6 +84,27 @@
             <div id="paramMsg" class="mt-3 text-sm hidden"></div>
             <input type="hidden" id="pId">
             <button onclick="guardarParams()" class="mt-6 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium">Guardar</button>
+        </div>
+    </div>
+
+    <!-- Cursos -->
+    <div id="tab-cursos-content" class="hidden">
+        <div class="flex justify-between items-center mb-4">
+            <p class="text-gray-500 text-sm">Cursos disponibles en la escuela (Jardin, Primaria, etc.)</p>
+            <button onclick="abrirModalCurso()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium">+ Nuevo curso</button>
+        </div>
+        <div class="bg-white rounded-xl shadow overflow-hidden max-w-lg">
+            <table class="w-full text-sm">
+                <thead class="bg-blue-50 text-blue-800">
+                    <tr>
+                        <th class="px-4 py-3 text-left">Nombre</th>
+                        <th class="px-4 py-3 text-center">Orden</th>
+                        <th class="px-4 py-3 text-left">Estado</th>
+                        <th class="px-4 py-3 text-left">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaCursos" class="divide-y divide-gray-100"></tbody>
+            </table>
         </div>
     </div>
 
@@ -147,10 +169,10 @@ async function logout(){await fetch('/api/auth/logout',{method:'POST'});window.l
 fetch('/api/auth/me').then(r=>r.json()).then(u=>{
     if(!u.id){window.location.href='/login';return;}
     document.getElementById('userInfo').textContent=u.nombre+' ('+u.rol+')';
-    cargarParams();cargarUsuarios();
+    cargarParams();cargarUsuarios();cargarCursos();
 });
 function mostrarTab(tab){
-    ['params','usuarios'].forEach(t=>{
+    ['params','usuarios','cursos'].forEach(t=>{
         document.getElementById('tab-'+t+'-content').classList.add('hidden');
         document.getElementById('tab-'+t).className='pb-3 px-1 text-gray-500 hover:text-gray-700 text-sm';
     });
@@ -234,6 +256,87 @@ async function toggleUsuario(id,activo){
     const data=await res.json();
     if(!data.ok)alert(data.error||'Error');else cargarUsuarios();
 }
+
+// ---- Cursos ----
+let cursosData=[];
+async function cargarCursos(){
+    cursosData=await fetch('/api/admin/cursos').then(r=>r.json());
+    const tbody=document.getElementById('tablaCursos');
+    if(!tbody)return;
+    tbody.innerHTML='';
+    (cursosData||[]).forEach(c=>{
+        const cls=c.activo?'bg-green-100 text-green-700':'bg-gray-100 text-gray-500';
+        tbody.innerHTML+=`<tr class="hover:bg-gray-50">
+            <td class="px-4 py-3 font-medium">${c.nombre}</td>
+            <td class="px-4 py-3 text-center text-gray-500">${c.orden}</td>
+            <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full text-xs ${cls}">${c.activo?'Activo':'Inactivo'}</span></td>
+            <td class="px-4 py-3 space-x-2">
+                <button onclick="editarCurso(${c.id_curso})" class="text-blue-600 hover:underline text-xs">Editar</button>
+                <button onclick="eliminarCurso(${c.id_curso})" class="text-red-500 hover:underline text-xs">Eliminar</button>
+            </td>
+        </tr>`;
+    });
+}
+function abrirModalCurso(id){
+    const c=id?cursosData.find(x=>x.id_curso===id):null;
+    document.getElementById('cId').value=c?c.id_curso:'';
+    document.getElementById('cNombre').value=c?c.nombre:'';
+    document.getElementById('cOrden').value=c?c.orden:0;
+    document.getElementById('cActivo').checked=c?c.activo:true;
+    document.getElementById('cursoError').classList.add('hidden');
+    document.getElementById('modalCursoTitulo').textContent=c?'Editar curso':'Nuevo curso';
+    document.getElementById('modalCurso').classList.remove('hidden');
+}
+function editarCurso(id){abrirModalCurso(id);}
+async function guardarCurso(){
+    const id=document.getElementById('cId').value;
+    const payload={
+        nombre:document.getElementById('cNombre').value,
+        orden:parseInt(document.getElementById('cOrden').value)||0,
+        activo:document.getElementById('cActivo').checked
+    };
+    if(!payload.nombre){document.getElementById('cursoError').textContent='Nombre requerido';document.getElementById('cursoError').classList.remove('hidden');return;}
+    const url=id?'/api/admin/cursos/'+id:'/api/admin/cursos';
+    const method=id?'PUT':'POST';
+    const res=await fetch(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const data=await res.json();
+    if(!res.ok){document.getElementById('cursoError').textContent=data.error||'Error';document.getElementById('cursoError').classList.remove('hidden');return;}
+    document.getElementById('modalCurso').classList.add('hidden');
+    cargarCursos();
+}
+async function eliminarCurso(id){
+    if(!confirm('¿Eliminar este curso?'))return;
+    const res=await fetch('/api/admin/cursos/'+id,{method:'DELETE'});
+    const data=await res.json();
+    if(!data.ok)alert(data.error||'Error');else cargarCursos();
+}
 </script>
+
+<!-- Modal curso -->
+<div id="modalCurso" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8">
+        <h3 id="modalCursoTitulo" class="text-xl font-bold text-blue-900 mb-6">Nuevo Curso</h3>
+        <input type="hidden" id="cId">
+        <div class="space-y-4">
+            <div>
+                <label class="text-xs text-gray-500">Nombre del curso *</label>
+                <input id="cNombre" type="text" placeholder="Ej: Sala de 3, 1° grado" class="mt-1 w-full border rounded px-3 py-2 text-sm">
+            </div>
+            <div>
+                <label class="text-xs text-gray-500">Orden de visualizacion</label>
+                <input id="cOrden" type="number" min="0" class="mt-1 w-full border rounded px-3 py-2 text-sm" value="0">
+            </div>
+            <div class="flex items-center gap-2">
+                <input id="cActivo" type="checkbox" checked class="w-4 h-4">
+                <label class="text-sm text-gray-600">Activo</label>
+            </div>
+        </div>
+        <div id="cursoError" class="text-red-600 text-sm mt-3 hidden"></div>
+        <div class="flex justify-end gap-3 mt-6">
+            <button onclick="document.getElementById('modalCurso').classList.add('hidden')" class="px-5 py-2 border rounded-lg text-gray-600">Cancelar</button>
+            <button onclick="guardarCurso()" class="px-5 py-2 bg-blue-600 text-white rounded-lg font-medium">Guardar</button>
+        </div>
+    </div>
+</div>
 </body>
 </html>

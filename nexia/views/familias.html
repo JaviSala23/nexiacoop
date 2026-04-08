@@ -151,7 +151,11 @@ async function logout() {
 fetch('/api/auth/me').then(r=>r.json()).then(u=>{
     if (!u.id) { window.location.href='/login'; return; }
     document.getElementById('userInfo').textContent = u.nombre + ' (' + u.rol + ')';
-    cargarFamilias();
+    fetch('/api/admin/cursos').then(r=>r.json()).then(cursos=>{
+        window._cursosOpts = '<option value="">-- Curso --</option>' +
+            (cursos||[]).filter(c=>c.activo).map(c=>`<option value="${c.nombre}">${c.nombre}</option>`).join('');
+        cargarFamilias();
+    });
 });
 
 async function cargarFamilias() {
@@ -247,11 +251,12 @@ function agregarAlumno(datos) {
         <div><label class="text-xs text-gray-500">DNI *</label><input type="text" class="alumno-dni mt-1 w-full border rounded px-2 py-1 text-sm" value="${d.dni||''}"></div>
         <div><label class="text-xs text-gray-500">Nombre completo *</label><input type="text" class="alumno-nombre mt-1 w-full border rounded px-2 py-1 text-sm" value="${d.nombre_completo||''}"></div>
         <div><label class="text-xs text-gray-500">Fecha de nacimiento</label><input type="date" class="alumno-fnac mt-1 w-full border rounded px-2 py-1 text-sm" value="${d.fecha_nacimiento||''}"></div>
-        <div><label class="text-xs text-gray-500">Año escolar</label><input type="text" class="alumno-anio mt-1 w-full border rounded px-2 py-1 text-sm" value="${d.anio_escolar||''}" placeholder="Ej: 3° grado"></div>
+        <div><label class="text-xs text-gray-500">Año escolar</label><select class="alumno-anio mt-1 w-full border rounded px-2 py-1 text-sm">${window._cursosOpts||''}</select></div>
         <div class="col-span-2 flex justify-end">
             <button type="button" onclick="quitarAlumno(${idx})" class="text-red-400 hover:text-red-600 text-xs">Quitar</button>
         </div>`;
     document.getElementById('alumnosList').appendChild(div);
+    if (d.anio_escolar) setAnioEscolar(idx, d.anio_escolar);
 }
 
 function quitarAlumno(idx) {
@@ -327,6 +332,12 @@ function recogerAlumnos() {
         fecha_nacimiento: d.querySelector('.alumno-fnac').value,
         anio_escolar:   d.querySelector('.alumno-anio').value
     }));
+}
+
+// selecciona el curso correcto en el select recién creado
+function setAnioEscolar(idx, valor) {
+    const sel = document.querySelector('#alumno_' + idx + ' .alumno-anio');
+    if (sel && valor) sel.value = valor;
 }
 
 async function guardarFamilia() {

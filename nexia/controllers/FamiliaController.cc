@@ -1,6 +1,7 @@
 #include "FamiliaController.h"
 #include <drogon/drogon.h>
 #include "../repositories/FamiliaRepository.h"
+#include <ctime>
 
 static std::string familiaFriendlyError(const std::string& raw) {
     if (raw.find("ya existe") != std::string::npos) return raw;
@@ -120,7 +121,17 @@ void FamiliaController::crear(const drogon::HttpRequestPtr& req,
     f.direccion      = (*body).get("direccion", "").asString();
     f.telefono       = (*body).get("telefono", "").asString();
     f.estado         = (*body).get("estado", "ACTIVA").asString();
-    f.fecha_alta     = (*body)["fecha_alta"].asString();
+    // Si fecha_alta no se provee o es vacía, usar hoy
+    std::string fa = (*body).get("fecha_alta", "").asString();
+    if (fa.empty()) {
+        time_t now = time(nullptr);
+        struct tm tm_info{};
+        localtime_r(&now, &tm_info);
+        char buf[11];
+        strftime(buf, sizeof(buf), "%Y-%m-%d", &tm_info);
+        fa = buf;
+    }
+    f.fecha_alta     = fa;
     f.observaciones  = (*body).get("observaciones", "").asString();
 
     // Validar el DNI del primer tutor para unicidad

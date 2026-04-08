@@ -199,6 +199,26 @@ INSERT INTO plan_cuentas (codigo, nombre, tipo) VALUES
 ('EGR-005', 'Gastos administrativos',   'EGRESO'),
 ('EGR-006', 'Otros egresos',            'EGRESO');
 
+-- Cursos (configurables desde Admin → Cursos)
+CREATE TABLE IF NOT EXISTS cursos (
+    id_curso  INT AUTO_INCREMENT PRIMARY KEY,
+    nombre    VARCHAR(60) NOT NULL,
+    orden     INT NOT NULL DEFAULT 0,
+    activo    TINYINT(1) NOT NULL DEFAULT 1
+) ENGINE=InnoDB;
+
+INSERT INTO cursos (nombre, orden) VALUES
+('Sala de 3 (Jardín)', 1),
+('Sala de 4 (Jardín)', 2),
+('Sala de 5 (Jardín)', 3),
+('1° grado', 10),
+('2° grado', 20),
+('3° grado', 30),
+('4° grado', 40),
+('5° grado', 50),
+('6° grado', 60),
+('7° grado', 70);
+
 -- Usuario admin inicial. Password: admin123 (SHA-256)
 INSERT INTO usuarios (username, password_hash, nombre, rol)
 VALUES ('admin', SHA2('admin123', 256), 'Administrador', 'ADMIN');

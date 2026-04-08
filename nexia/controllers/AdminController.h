@@ -19,6 +19,10 @@ public:
     ADD_METHOD_TO(AdminController::eliminarLocalidad,  "/api/admin/localidades/{id}",  Delete, "AuthFilter");
     ADD_METHOD_TO(AdminController::crearProvincia,     "/api/admin/provincias",        Post, "AuthFilter");
     ADD_METHOD_TO(AdminController::eliminarProvincia,  "/api/admin/provincias/{id}",   Delete, "AuthFilter");
+    ADD_METHOD_TO(AdminController::listarCursos,   "/api/admin/cursos",        Get,    "AuthFilter");
+    ADD_METHOD_TO(AdminController::crearCurso,     "/api/admin/cursos",        Post,   "AuthFilter");
+    ADD_METHOD_TO(AdminController::actualizarCurso,"/api/admin/cursos/{id}",   Put,    "AuthFilter");
+    ADD_METHOD_TO(AdminController::eliminarCurso,  "/api/admin/cursos/{id}",   Delete, "AuthFilter");
     METHOD_LIST_END
 
     void pagina(const drogon::HttpRequestPtr&,
@@ -47,4 +51,12 @@ public:
                         std::function<void(const drogon::HttpResponsePtr&)>&&);
     void eliminarProvincia(const drogon::HttpRequestPtr&,
                            std::function<void(const drogon::HttpResponsePtr&)>&&, int id);
+    void listarCursos(const drogon::HttpRequestPtr&,
+                      std::function<void(const drogon::HttpResponsePtr&)>&&);
+    void crearCurso(const drogon::HttpRequestPtr&,
+                    std::function<void(const drogon::HttpResponsePtr&)>&&);
+    void actualizarCurso(const drogon::HttpRequestPtr&,
+                         std::function<void(const drogon::HttpResponsePtr&)>&&, int id);
+    void eliminarCurso(const drogon::HttpRequestPtr&,
+                       std::function<void(const drogon::HttpResponsePtr&)>&&, int id);
 };

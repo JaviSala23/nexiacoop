@@ -3,6 +3,7 @@
 #include "../repositories/UsuarioRepository.h"
 #include "../repositories/ParametroRepository.h"
 #include "../repositories/ProvinciaRepository.h"
+#include "../repositories/CursoRepository.h"
 #include "../services/AuthService.h"
 
 void AdminController::pagina(const drogon::HttpRequestPtr&,
@@ -280,6 +281,104 @@ void AdminController::eliminarProvincia(const drogon::HttpRequestPtr&,
     std::function<void(const drogon::HttpResponsePtr&)>&& callback, int id)
 {
     ProvinciaRepository::eliminarProvincia(id,
+        [callback]() {
+            Json::Value res; res["ok"] = true;
+            callback(drogon::HttpResponse::newHttpJsonResponse(res));
+        },
+        [callback](const std::string& e) {
+            LOG_ERROR << e;
+            Json::Value err; err["error"] = e;
+            auto r = drogon::HttpResponse::newHttpJsonResponse(err);
+            r->setStatusCode(drogon::k500InternalServerError); callback(r);
+        });
+}
+
+// -------------------------------------------------------
+// Cursos
+// -------------------------------------------------------
+static Json::Value cursoToJson(const Curso& c) {
+    Json::Value o;
+    o["id_curso"] = c.id_curso;
+    o["nombre"]   = c.nombre;
+    o["orden"]    = c.orden;
+    o["activo"]   = c.activo;
+    return o;
+}
+
+void AdminController::listarCursos(const drogon::HttpRequestPtr&,
+    std::function<void(const drogon::HttpResponsePtr&)>&& callback)
+{
+    CursoRepository::listar(
+        [callback](std::vector<Curso> lista) {
+            Json::Value arr(Json::arrayValue);
+            for (const auto& c : lista) arr.append(cursoToJson(c));
+            callback(drogon::HttpResponse::newHttpJsonResponse(arr));
+        },
+        [callback](const std::string& e) {
+            LOG_ERROR << e;
+            Json::Value err; err["error"] = e;
+            auto r = drogon::HttpResponse::newHttpJsonResponse(err);
+            r->setStatusCode(drogon::k500InternalServerError); callback(r);
+        });
+}
+
+void AdminController::crearCurso(const drogon::HttpRequestPtr& req,
+    std::function<void(const drogon::HttpResponsePtr&)>&& callback)
+{
+    auto body = req->getJsonObject();
+    if (!body || !(*body)["nombre"].isString()) {
+        Json::Value err; err["error"] = "Nombre requerido";
+        auto r = drogon::HttpResponse::newHttpJsonResponse(err);
+        r->setStatusCode(drogon::k400BadRequest); callback(r); return;
+    }
+    Curso c;
+    c.nombre = (*body)["nombre"].asString();
+    c.orden  = (*body).get("orden", 0).asInt();
+    c.activo = (*body).get("activo", true).asBool();
+    CursoRepository::insertar(c,
+        [callback](int id) {
+            Json::Value res; res["ok"] = true; res["id_curso"] = id;
+            auto r = drogon::HttpResponse::newHttpJsonResponse(res);
+            r->setStatusCode(drogon::k201Created); callback(r);
+        },
+        [callback](const std::string& e) {
+            LOG_ERROR << e;
+            Json::Value err; err["error"] = e;
+            auto r = drogon::HttpResponse::newHttpJsonResponse(err);
+            r->setStatusCode(drogon::k500InternalServerError); callback(r);
+        });
+}
+
+void AdminController::actualizarCurso(const drogon::HttpRequestPtr& req,
+    std::function<void(const drogon::HttpResponsePtr&)>&& callback, int id)
+{
+    auto body = req->getJsonObject();
+    if (!body || !(*body)["nombre"].isString()) {
+        Json::Value err; err["error"] = "Nombre requerido";
+        auto r = drogon::HttpResponse::newHttpJsonResponse(err);
+        r->setStatusCode(drogon::k400BadRequest); callback(r); return;
+    }
+    Curso c;
+    c.nombre = (*body)["nombre"].asString();
+    c.orden  = (*body).get("orden", 0).asInt();
+    c.activo = (*body).get("activo", true).asBool();
+    CursoRepository::actualizar(id, c,
+        [callback]() {
+            Json::Value res; res["ok"] = true;
+            callback(drogon::HttpResponse::newHttpJsonResponse(res));
+        },
+        [callback](const std::string& e) {
+            LOG_ERROR << e;
+            Json::Value err; err["error"] = e;
+            auto r = drogon::HttpResponse::newHttpJsonResponse(err);
+            r->setStatusCode(drogon::k500InternalServerError); callback(r);
+        });
+}
+
+void AdminController::eliminarCurso(const drogon::HttpRequestPtr&,
+    std::function<void(const drogon::HttpResponsePtr&)>&& callback, int id)
+{
+    CursoRepository::eliminar(id,
         [callback]() {
             Json::Value res; res["ok"] = true;
             callback(drogon::HttpResponse::newHttpJsonResponse(res));
