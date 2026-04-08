@@ -187,3 +187,41 @@ void TalonService::generarExtra(int idFamilia, int idConcepto, double monto,
         },
         errCallback);
 }
+
+// -------------------------------------------------------
+// Generar talones de concepto EXTRA para TODAS las familias activas
+// -------------------------------------------------------
+void TalonService::generarExtraBatch(int idConcepto, double monto,
+    const std::string& observaciones,
+    std::function<void(int)> callback,
+    std::function<void(const std::string&)> errCallback)
+{
+    FamiliaRepository::listar("ACTIVA",
+        [idConcepto, monto, observaciones, callback, errCallback](std::vector<Familia> familias) {
+            if (familias.empty()) { errCallback("No hay familias activas"); return; }
+            auto now = std::chrono::system_clock::now();
+            auto ts  = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count();
+            std::vector<Talon> talones;
+            talones.reserve(familias.size());
+            for (const auto& fam : familias) {
+                std::ostringstream oss;
+                oss << std::setw(6) << std::setfill('0') << fam.numero_familia
+                    << std::setw(3) << std::setfill('0') << idConcepto
+                    << std::setw(8) << std::setfill('0') << ((ts + fam.id_familia) % 100000000LL);
+                Talon t;
+                t.id_familia    = fam.id_familia;
+                t.id_concepto   = idConcepto;
+                t.mes           = 0;
+                t.anio          = 0;
+                t.monto         = monto;
+                t.codigo_barra  = oss.str();
+                t.observaciones = observaciones;
+                talones.push_back(std::move(t));
+            }
+            int cnt = static_cast<int>(talones.size());
+            TalonRepository::insertarBatch(talones,
+                [cnt, callback]() { callback(cnt); },
+                errCallback);
+        },
+        errCallback);
+}

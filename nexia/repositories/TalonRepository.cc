@@ -240,3 +240,15 @@ void TalonRepository::listarMorosos(
         },
         [errCallback](const DrogonDbException& e) { errCallback(e.base().what()); });
 }
+
+void TalonRepository::actualizarMonto(int idTalon, double monto,
+    std::function<void()> callback,
+    std::function<void(const std::string&)> errCallback)
+{
+    auto db = drogon::app().getDbClient("main");
+    db->execSqlAsync(
+        "UPDATE talones SET monto=? WHERE id_talon=? AND estado='GENERADO'",
+        [callback](const drogon::orm::Result&) { callback(); },
+        [errCallback](const drogon::orm::DrogonDbException& e) { errCallback(e.base().what()); },
+        monto, idTalon);
+}

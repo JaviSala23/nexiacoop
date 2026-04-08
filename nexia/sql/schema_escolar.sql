@@ -222,3 +222,29 @@ INSERT INTO cursos (nombre, orden) VALUES
 -- Usuario admin inicial. Password: admin123 (SHA-256)
 INSERT INTO usuarios (username, password_hash, nombre, rol)
 VALUES ('admin', SHA2('admin123', 256), 'Administrador', 'ADMIN');
+
+-- ------------------------------------------------------------
+-- HISTORIAL DE PASE DE AÑO
+-- Permite revertir el último pase de año realizado
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS pase_anio_historial (
+    id_historial      INT AUTO_INCREMENT PRIMARY KEY,
+    fecha_ejecucion   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    usuario           VARCHAR(100) DEFAULT NULL,
+    egresados         INT NOT NULL DEFAULT 0,
+    promovidos        INT NOT NULL DEFAULT 0,
+    familias_inactiv  INT NOT NULL DEFAULT 0,
+    revertido         TINYINT(1) NOT NULL DEFAULT 0,
+    fecha_reversion   DATETIME DEFAULT NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS pase_anio_detalle (
+    id_detalle        INT AUTO_INCREMENT PRIMARY KEY,
+    id_historial      INT NOT NULL,
+    tipo              ENUM('ALUMNO','FAMILIA') NOT NULL,
+    ref_id            INT NOT NULL,
+    campo_anterior    VARCHAR(40) NOT NULL,
+    valor_anterior    VARCHAR(100) NOT NULL,
+    FOREIGN KEY (id_historial) REFERENCES pase_anio_historial(id_historial)
+        ON DELETE CASCADE
+) ENGINE=InnoDB;

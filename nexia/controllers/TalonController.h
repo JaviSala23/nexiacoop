@@ -9,8 +9,10 @@ public:
     ADD_METHOD_TO(TalonController::pagina,         "/talones",                    Get, "AuthFilter");
     ADD_METHOD_TO(TalonController::listar,         "/api/talones",                Get, "AuthFilter");
     ADD_METHOD_TO(TalonController::generar,        "/api/talones/generar",        Post,"AuthFilter");
-    ADD_METHOD_TO(TalonController::generarExtra,   "/api/talones/generar-extra",  Post,"AuthFilter");
-    ADD_METHOD_TO(TalonController::anular,         "/api/talones/{id}/anular",    Post,"AuthFilter");
+    ADD_METHOD_TO(TalonController::generarExtra,       "/api/talones/generar-extra",        Post,"AuthFilter");
+    ADD_METHOD_TO(TalonController::generarExtraTodos,   "/api/talones/generar-extra-todos",  Post,"AuthFilter");
+    ADD_METHOD_TO(TalonController::editarMonto,         "/api/talones/{id}/monto",           Put, "AuthFilter");
+    ADD_METHOD_TO(TalonController::anular,              "/api/talones/{id}/anular",          Post,"AuthFilter");
     METHOD_LIST_END
 
     void pagina(const drogon::HttpRequestPtr&,
@@ -21,6 +23,10 @@ public:
                  std::function<void(const drogon::HttpResponsePtr&)>&&);
     void generarExtra(const drogon::HttpRequestPtr&,
                       std::function<void(const drogon::HttpResponsePtr&)>&&);
+    void generarExtraTodos(const drogon::HttpRequestPtr&,
+                           std::function<void(const drogon::HttpResponsePtr&)>&&);
+    void editarMonto(const drogon::HttpRequestPtr&,
+                     std::function<void(const drogon::HttpResponsePtr&)>&&, int id);
     void anular(const drogon::HttpRequestPtr&,
                 std::function<void(const drogon::HttpResponsePtr&)>&&, int id);
 };

@@ -9,4 +9,7 @@ struct Alumno {
     std::string fecha_nacimiento;
     std::string anio_escolar;
     std::string estado{"ACTIVO"};
+    // Campos calculados (JOIN con familias/tutores)
+    int    numero_familia{0};
+    std::string nombre_tutor_principal;
 };

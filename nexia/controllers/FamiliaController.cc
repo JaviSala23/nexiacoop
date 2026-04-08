@@ -48,13 +48,15 @@ static Json::Value tutorToJson(const Tutor& t) {
 
 static Json::Value alumnoToJson(const Alumno& a) {
     Json::Value o;
-    o["id_alumno"]        = a.id_alumno;
-    o["id_familia"]       = a.id_familia;
-    o["dni"]              = a.dni;
-    o["nombre_completo"]  = a.nombre_completo;
-    o["fecha_nacimiento"] = a.fecha_nacimiento;
-    o["anio_escolar"]     = a.anio_escolar;
-    o["estado"]           = a.estado;
+    o["id_alumno"]              = a.id_alumno;
+    o["id_familia"]             = a.id_familia;
+    o["dni"]                    = a.dni;
+    o["nombre_completo"]        = a.nombre_completo;
+    o["fecha_nacimiento"]       = a.fecha_nacimiento;
+    o["anio_escolar"]           = a.anio_escolar;
+    o["estado"]                 = a.estado;
+    o["numero_familia"]         = a.numero_familia;
+    o["nombre_tutor_principal"] = a.nombre_tutor_principal;
     return o;
 }
 
@@ -469,3 +471,115 @@ void FamiliaController::eliminarAlumno(const drogon::HttpRequestPtr&,
             r->setStatusCode(drogon::k500InternalServerError); callback(r);
         });
 }
+
+// -------------------------------------------------------
+// Alumnos globales
+// -------------------------------------------------------
+void FamiliaController::paginaAlumnos(const drogon::HttpRequestPtr&,
+    std::function<void(const drogon::HttpResponsePtr&)>&& callback)
+{
+    callback(drogon::HttpResponse::newFileResponse("views/alumnos.html"));
+}
+
+void FamiliaController::listarTodosAlumnos(const drogon::HttpRequestPtr& req,
+    std::function<void(const drogon::HttpResponsePtr&)>&& callback)
+{
+    std::string estado     = req->getParameter("estado");
+    std::string anioEscolar = req->getParameter("grado");
+    FamiliaRepository::listarTodosAlumnos(estado, anioEscolar,
+        [callback](std::vector<Alumno> lista) {
+            Json::Value arr(Json::arrayValue);
+            for (const auto& a : lista) arr.append(alumnoToJson(a));
+            callback(drogon::HttpResponse::newHttpJsonResponse(arr));
+        },
+        [callback](const std::string& e) {
+            LOG_ERROR << e;
+            Json::Value err; err["error"] = e;
+            auto r = drogon::HttpResponse::newHttpJsonResponse(err);
+            r->setStatusCode(drogon::k500InternalServerError); callback(r);
+        });
+}
+
+void FamiliaController::statsAlumnos(const drogon::HttpRequestPtr&,
+    std::function<void(const drogon::HttpResponsePtr&)>&& callback)
+{
+    FamiliaRepository::statsAlumnos(
+        [callback](Json::Value stats) {
+            callback(drogon::HttpResponse::newHttpJsonResponse(stats));
+        },
+        [callback](const std::string& e) {
+            LOG_ERROR << e;
+            Json::Value err; err["error"] = e;
+            auto r = drogon::HttpResponse::newHttpJsonResponse(err);
+            r->setStatusCode(drogon::k500InternalServerError); callback(r);
+        });
+}
+
+void FamiliaController::promoverGrados(const drogon::HttpRequestPtr&,
+    std::function<void(const drogon::HttpResponsePtr&)>&& callback)
+{
+    FamiliaRepository::promoverGrados(
+        [callback](int egresados, int promovidos, int familias_inact) {
+            Json::Value res;
+            res["ok"]                  = true;
+            res["egresados"]           = egresados;
+            res["promovidos"]          = promovidos;
+            res["familias_inactivadas"]= familias_inact;
+            callback(drogon::HttpResponse::newHttpJsonResponse(res));
+        },
+        [callback](const std::string& e) {
+            LOG_ERROR << e;
+            Json::Value err; err["error"] = e;
+            auto r = drogon::HttpResponse::newHttpJsonResponse(err);
+            r->setStatusCode(drogon::k500InternalServerError); callback(r);
+        });
+}
+
+void FamiliaController::estadoUltimaPromocion(const drogon::HttpRequestPtr&,
+    std::function<void(const drogon::HttpResponsePtr&)>&& callback)
+{
+    FamiliaRepository::estadoUltimaPromocion(
+        [callback](bool existe, std::string json) {
+            if (!existe) {
+                Json::Value res; res["existe"] = false;
+                callback(drogon::HttpResponse::newHttpJsonResponse(res));
+                return;
+            }
+            Json::Value parsed;
+            Json::Reader reader;
+            reader.parse(json, parsed);
+            parsed["existe"] = true;
+            callback(drogon::HttpResponse::newHttpJsonResponse(parsed));
+        },
+        [callback](const std::string& e) {
+            LOG_ERROR << e;
+            Json::Value err; err["error"] = e;
+            auto r = drogon::HttpResponse::newHttpJsonResponse(err);
+            r->setStatusCode(drogon::k500InternalServerError); callback(r);
+        });
+}
+
+void FamiliaController::revertirPromocion(const drogon::HttpRequestPtr&,
+    std::function<void(const drogon::HttpResponsePtr&)>&& callback)
+{
+    FamiliaRepository::revertirPromocion(
+        [callback](bool ok, std::string msg) {
+            Json::Value res;
+            res["ok"]      = ok;
+            res["mensaje"] = msg;
+            if (!ok) {
+                auto r = drogon::HttpResponse::newHttpJsonResponse(res);
+                r->setStatusCode(drogon::k400BadRequest); callback(r);
+            } else {
+                callback(drogon::HttpResponse::newHttpJsonResponse(res));
+            }
+        },
+        [callback](const std::string& e) {
+            LOG_ERROR << e;
+            Json::Value err; err["error"] = e;
+            auto r = drogon::HttpResponse::newHttpJsonResponse(err);
+            r->setStatusCode(drogon::k500InternalServerError); callback(r);
+        });
+}
+
+

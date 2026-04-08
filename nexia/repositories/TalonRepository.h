@@ -47,4 +47,8 @@ public:
     static void listarMorosos(
         std::function<void(Json::Value)> callback,
         std::function<void(const std::string&)> errCallback);
+
+    static void actualizarMonto(int idTalon, double monto,
+        std::function<void()> callback,
+        std::function<void(const std::string&)> errCallback);
 };

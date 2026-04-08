@@ -23,6 +23,12 @@ public:
         std::function<void(int idTalon)> callback,
         std::function<void(const std::string&)> errCallback);
 
+    // Genera talones de concepto extra para TODAS las familias activas
+    static void generarExtraBatch(int idConcepto, double monto,
+        const std::string& observaciones,
+        std::function<void(int cantGenerados)> callback,
+        std::function<void(const std::string&)> errCallback);
+
     // Código de barra: FFFFFFAAAAMM_CONCEPTO (F=familia, A=anio, M=mes, C=id_concepto)
     static std::string generarCodigoBarra(int numFamilia, int anio, int mes, int idConcepto);
 };

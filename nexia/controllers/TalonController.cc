@@ -122,6 +122,63 @@ void TalonController::generarExtra(const drogon::HttpRequestPtr& req,
         });
 }
 
+void TalonController::generarExtraTodos(const drogon::HttpRequestPtr& req,
+    std::function<void(const drogon::HttpResponsePtr&)>&& callback)
+{
+    auto body = req->getJsonObject();
+    if (!body || !(*body)["id_concepto"].isInt()) {
+        Json::Value err; err["error"] = "Se requiere id_concepto";
+        auto r = drogon::HttpResponse::newHttpJsonResponse(err);
+        r->setStatusCode(drogon::k400BadRequest); callback(r); return;
+    }
+    int    idConcepto = (*body)["id_concepto"].asInt();
+    double monto      = (*body).get("monto", 0.0).asDouble();
+    std::string obs   = (*body).get("observaciones", "").asString();
+
+    TalonService::generarExtraBatch(idConcepto, monto, obs,
+        [callback](int cant) {
+            Json::Value res;
+            res["ok"] = true; res["generados"] = cant;
+            res["mensaje"] = "Se generaron " + std::to_string(cant) + " talones de extras";
+            auto r = drogon::HttpResponse::newHttpJsonResponse(res);
+            r->setStatusCode(drogon::k201Created); callback(r);
+        },
+        [callback](const std::string& e) {
+            LOG_ERROR << e;
+            Json::Value err; err["error"] = e;
+            auto r = drogon::HttpResponse::newHttpJsonResponse(err);
+            r->setStatusCode(drogon::k400BadRequest); callback(r);
+        });
+}
+
+void TalonController::editarMonto(const drogon::HttpRequestPtr& req,
+    std::function<void(const drogon::HttpResponsePtr&)>&& callback, int id)
+{
+    auto body = req->getJsonObject();
+    if (!body || !(*body)["monto"].isNumeric()) {
+        Json::Value err; err["error"] = "Se requiere monto";
+        auto r = drogon::HttpResponse::newHttpJsonResponse(err);
+        r->setStatusCode(drogon::k400BadRequest); callback(r); return;
+    }
+    double monto = (*body)["monto"].asDouble();
+    if (monto <= 0) {
+        Json::Value err; err["error"] = "El monto debe ser mayor a cero";
+        auto r = drogon::HttpResponse::newHttpJsonResponse(err);
+        r->setStatusCode(drogon::k400BadRequest); callback(r); return;
+    }
+    TalonRepository::actualizarMonto(id, monto,
+        [callback]() {
+            Json::Value res; res["ok"] = true;
+            callback(drogon::HttpResponse::newHttpJsonResponse(res));
+        },
+        [callback](const std::string& e) {
+            LOG_ERROR << e;
+            Json::Value err; err["error"] = e;
+            auto r = drogon::HttpResponse::newHttpJsonResponse(err);
+            r->setStatusCode(drogon::k500InternalServerError); callback(r);
+        });
+}
+
 void TalonController::anular(const drogon::HttpRequestPtr&,
     std::function<void(const drogon::HttpResponsePtr&)>&& callback, int id)
 {

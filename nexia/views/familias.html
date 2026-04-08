@@ -16,6 +16,7 @@
     <nav class="flex-1 p-4 space-y-1">
         <a href="/dashboard"    class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">🏠 Dashboard</a>
         <a href="/familias"     class="flex items-center gap-3 px-4 py-2 rounded-lg bg-blue-700 font-medium">👨‍👩‍👧 Familias</a>
+        <a href="/alumnos"     class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">🎒 Alumnos</a>
         <a href="/talones"      class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">🧾 Talones</a>
         <a href="/pagos"        class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">💳 Pagos</a>
         <a href="/conceptos"    class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">📂 Conceptos</a>
@@ -32,7 +33,11 @@
 <main class="ml-64 flex-1 p-8">
     <div class="flex justify-between items-center mb-6">
         <h2 class="text-2xl font-bold text-blue-900">Familias</h2>
-        <button onclick="abrirModalNuevo()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-medium">+ Nueva familia</button>
+        <div class="flex gap-2">
+            <button onclick="imprimirFamilias()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium text-sm">&#128438; Listado familias</button>
+            <button onclick="imprimirAlumnos()" class="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg font-medium text-sm">&#128438; Alumnos activos</button>
+            <button onclick="abrirModalNuevo()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-medium">+ Nueva familia</button>
+        </div>
     </div>
 
     <!-- Filtros -->
@@ -375,15 +380,153 @@ async function guardarFamilia() {
     cargarFamilias();
 }
 
-async function cambiarEstado(id, estadoActual) {
-    const opciones = ['ACTIVA','INACTIVA','BAJA'].filter(e => e !== estadoActual);
-    const nuevo = prompt('Cambiar estado a (opciones: ' + opciones.join(', ') + '):', opciones[0]);
-    if (!nuevo) return;
-    const res = await fetch('/api/familias/' + id + '/estado', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({estado: nuevo.toUpperCase()})});
+function cambiarEstado(id, estadoActual) {
+    document.getElementById('modalEstadoId').value = id;
+    document.getElementById('modalEstadoActual').textContent = estadoActual;
+    const sel = document.getElementById('modalEstadoNuevo');
+    sel.innerHTML = ['ACTIVA','INACTIVA','BAJA'].map(e=>`<option value="${e}" ${e===estadoActual?'selected':''}>${e}</option>`).join('');
+    document.getElementById('modalEstado').classList.remove('hidden');
+}
+async function guardarEstado() {
+    const id = document.getElementById('modalEstadoId').value;
+    const estado = document.getElementById('modalEstadoNuevo').value;
+    const res = await fetch('/api/familias/' + id + '/estado', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({estado})});
     const data = await res.json();
+    document.getElementById('modalEstado').classList.add('hidden');
     if (!data.ok) alert(data.error || 'Error');
     else cargarFamilias();
 }
+
+// -------- Impresión --------
+const _famPrintStyle = `<style>
+    body{font-family:Arial,sans-serif;margin:20px;color:#111;}
+    h1{font-size:17px;font-weight:bold;color:#1e3a5f;margin-bottom:3px;}
+    .sub{font-size:11px;color:#666;margin-bottom:14px;}
+    h2{font-size:13px;font-weight:bold;color:#1e3a5f;margin:18px 0 6px;border-bottom:1px solid #ddd;padding-bottom:4px;}
+    table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:10px;}
+    th{background:#e0ecff;color:#1e3a5f;text-align:left;padding:6px 8px;border-bottom:2px solid #b0c4de;}
+    td{padding:5px 8px;border-bottom:1px solid #e5e7eb;vertical-align:top;}
+    tr:nth-child(even) td{background:#f9fafb;}
+    .badge{display:inline-block;padding:1px 7px;border-radius:99px;font-size:10px;}
+    .activa{background:#dcfce7;color:#15803d;}
+    .inactiva{background:#fef9c3;color:#854d0e;}
+    .baja{background:#fee2e2;color:#b91c1c;}
+    .no-print{cursor:pointer;background:#1e40af;color:#fff;border:none;padding:8px 20px;border-radius:6px;font-size:13px;margin-bottom:16px;}
+    @media print{.no-print{display:none!important;} @page{margin:12mm;}}
+</style>`;
+
+function _famPrintWindow(html) {
+    const win = window.open('','_blank','width=900,height=700');
+    win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8">' + _famPrintStyle + '</head><body>');
+    win.document.write('<button class="no-print" onclick="window.print()">🖨 Imprimir / PDF</button>');
+    win.document.write(html);
+    win.document.write('</body></html>');
+    win.document.close();
+}
+
+let _nombreInstFam = 'Cooperadora Escolar';
+fetch('/api/admin/parametros').then(r=>r.json()).then(p=>{ _nombreInstFam = p.nombre_institucion || 'Cooperadora Escolar'; });
+
+async function imprimirFamilias() {
+    const [familias, cuotas] = await Promise.all([
+        fetch('/api/familias').then(r=>r.json()),
+        fetch('/api/cuotas-config').then(r=>r.json())
+    ]);
+    // Construir tabla de precios: cantidad_hijos -> monto
+    const precioMap = {};
+    (cuotas||[]).forEach(c => { precioMap[c.cantidad_hijos] = c.monto; });
+    const maxHijos = Math.max(...Object.keys(precioMap).map(Number), 0);
+    const getPrecio = (cant) => {
+        if (!cant) return null;
+        // igual que el backend: busca <= cant, el más alto
+        let best = null, bestK = -1;
+        Object.keys(precioMap).forEach(k => {
+            const ki = parseInt(k);
+            if (ki <= cant && ki > bestK) { bestK = ki; best = precioMap[k]; }
+        });
+        return best;
+    };
+    const fmt = v => v != null ? Number(v).toLocaleString('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}) : '-';
+    const activas = (familias||[]).filter(f=>f.estado==='ACTIVA').sort((a,b)=>a.numero_familia-b.numero_familia);
+    const todas   = (familias||[]).sort((a,b)=>a.numero_familia-b.numero_familia);
+    const rows = todas.map(f => {
+        const precio = getPrecio(f.cantidad_alumnos);
+        const estadoCls = f.estado==='ACTIVA'?'activa':f.estado==='INACTIVA'?'inactiva':'baja';
+        return `<tr>
+            <td>${f.numero_familia}</td>
+            <td>${f.nombre_tutor_principal||'-'}</td>
+            <td>${f.dni_tutor_principal||'-'}</td>
+            <td>${f.telefono_tutor_principal||'-'}</td>
+            <td style="text-align:center">${f.cantidad_alumnos||0}</td>
+            <td style="text-align:right">${fmt(precio)}</td>
+            <td><span class="badge ${estadoCls}">${f.estado}</span></td>
+        </tr>`;
+    }).join('');
+    const html = `
+        <h1>${_nombreInstFam}</h1>
+        <div class="sub">Listado de Familias — Total: ${todas.length} (${activas.length} activas) — ${new Date().toLocaleDateString('es-AR')}</div>
+        <table>
+            <thead><tr>
+                <th>Nro</th><th>Tutor principal</th><th>DNI</th><th>Teléfono</th>
+                <th style="text-align:center">Alumnos</th><th style="text-align:right">Cuota</th><th>Estado</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+        </table>`;
+    _famPrintWindow(html);
+}
+
+async function imprimirAlumnos() {
+    const familias = await fetch('/api/familias').then(r=>r.json());
+    const activas = (familias||[]).filter(f=>f.estado==='ACTIVA').sort((a,b)=>a.numero_familia-b.numero_familia);
+    // Obtener alumnos de todas las familias activas en paralelo
+    const mapa = {};
+    await Promise.all(activas.map(f=>
+        fetch('/api/familias/'+f.id_familia+'/alumnos').then(r=>r.json()).then(a=>{ mapa[f.id_familia]=a||[]; })
+    ));
+    const fmt = v => v != null ? Number(v).toLocaleString('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}) : '-';
+    let totalAlumnos = 0;
+    const rows = activas.flatMap(f => {
+        const alumnos = (mapa[f.id_familia]||[]).filter(a=>a.estado!=='EGRESADO');
+        totalAlumnos += alumnos.length;
+        return alumnos.map((a,i) => `<tr>
+            <td>${i===0 ? f.numero_familia : ''}</td>
+            <td>${i===0 ? (f.nombre_tutor_principal||'-') : ''}</td>
+            <td>${a.nombre_completo||'-'}</td>
+            <td>${a.dni||'-'}</td>
+            <td>${a.anio_escolar||'-'}</td>
+        </tr>`);
+    }).join('');
+    const html = `
+        <h1>${_nombreInstFam}</h1>
+        <div class="sub">Alumnos activos — Total: ${totalAlumnos} — ${new Date().toLocaleDateString('es-AR')}</div>
+        <table>
+            <thead><tr>
+                <th>Fam.</th><th>Tutor</th><th>Alumno</th><th>DNI</th><th>Año escolar</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+        </table>`;
+    _famPrintWindow(html);
+}
 </script>
+<!-- Modal cambiar estado familia -->
+<div id="modalEstado" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xs p-7">
+        <h3 class="text-lg font-bold text-blue-900 mb-1">Cambiar estado</h3>
+        <p class="text-sm text-gray-500 mb-4">Estado actual: <span id="modalEstadoActual" class="font-semibold text-blue-800"></span></p>
+        <input type="hidden" id="modalEstadoId">
+        <div>
+            <label class="text-xs text-gray-500">Nuevo estado</label>
+            <select id="modalEstadoNuevo" class="mt-1 w-full border rounded px-3 py-2 text-sm">
+                <option value="ACTIVA">ACTIVA</option>
+                <option value="INACTIVA">INACTIVA</option>
+                <option value="BAJA">BAJA</option>
+            </select>
+        </div>
+        <div class="flex justify-end gap-3 mt-5">
+            <button onclick="document.getElementById('modalEstado').classList.add('hidden')" class="px-4 py-2 border rounded-lg text-gray-600 text-sm">Cancelar</button>
+            <button onclick="guardarEstado()" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium">Guardar</button>
+        </div>
+    </div>
+</div>
 </body>
 </html>

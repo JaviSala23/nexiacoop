@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Nexia - Contabilidad</title>
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body class="bg-gray-100 min-h-screen flex">
 <!-- Sidebar -->
@@ -16,6 +17,7 @@
     <nav class="flex-1 p-4 space-y-1">
         <a href="/dashboard"    class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">🏠 Dashboard</a>
         <a href="/familias"     class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">👨‍👩‍👧 Familias</a>
+        <a href="/alumnos"     class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">🎒 Alumnos</a>
         <a href="/talones"      class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">🧾 Talones</a>
         <a href="/pagos"        class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">💳 Pagos</a>
         <a href="/conceptos"    class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">📂 Conceptos</a>
@@ -59,6 +61,7 @@
             </div>
             <button onclick="cargarMovimientos()" class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded text-sm">Filtrar</button>
             <button onclick="abrirModalMovimiento()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm font-medium">+ Nuevo movimiento</button>
+            <button onclick="imprimirMovimientos()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm font-medium">&#128438; Imprimir</button>
         </div>
 
         <div class="bg-white rounded-xl shadow overflow-hidden mb-4">
@@ -104,17 +107,44 @@
 
     <!-- TAB: Resumen anual -->
     <div id="secResumen" class="hidden">
-        <div class="flex gap-4 items-end mb-4">
+        <div class="flex gap-4 items-end mb-6">
             <div>
                 <label class="text-xs text-gray-500">Año</label>
-                <input id="resAnio" type="number" value="2025" class="mt-1 border rounded px-3 py-2 text-sm w-24">
+                <input id="resAnio" type="number" value="2026" class="mt-1 border rounded px-3 py-2 text-sm w-24">
             </div>
             <button onclick="cargarResumen()" class="bg-blue-600 text-white px-4 py-2 rounded text-sm">Ver resumen</button>
+            <button onclick="imprimirResumen()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm font-medium">&#128438; Imprimir resumen</button>
         </div>
-        <div id="resumenAnual" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
-        <div id="resumenMensualSec" class="mt-6">
+
+        <!-- Totales por cuenta -->
+        <div id="resumenAnual" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8"></div>
+
+        <!-- Gráficos de distribución -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-white rounded-xl shadow p-5">
+                <h4 class="font-semibold text-green-700 mb-4">Distribución de Ingresos</h4>
+                <div style="position:relative;height:260px"><canvas id="chartIngresos"></canvas></div>
+            </div>
+            <div class="bg-white rounded-xl shadow p-5">
+                <h4 class="font-semibold text-red-600 mb-4">Distribución de Egresos</h4>
+                <div style="position:relative;height:260px"><canvas id="chartEgresos"></canvas></div>
+            </div>
+        </div>
+
+        <!-- Evolución mensual tabla + gráfico -->
+        <div id="resumenMensualSec" class="mt-2">
             <h4 class="font-semibold text-gray-700 mb-3">Evolución mensual</h4>
-            <div id="tablaMensual" class="bg-white rounded-xl shadow overflow-hidden">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div class="bg-white rounded-xl shadow p-5">
+                    <h5 class="text-sm font-semibold text-gray-600 mb-3">Ingresos vs Egresos (línea)</h5>
+                    <div style="position:relative;height:240px"><canvas id="chartLinea"></canvas></div>
+                </div>
+                <div class="bg-white rounded-xl shadow p-5">
+                    <h5 class="text-sm font-semibold text-gray-600 mb-3">Resultado neto por mes</h5>
+                    <div style="position:relative;height:240px"><canvas id="chartResultado"></canvas></div>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl shadow overflow-hidden">
                 <table class="w-full text-sm">
                     <thead class="bg-gray-50 text-gray-700">
                         <tr>
@@ -212,6 +242,12 @@
 
 <script>
 const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const mesesLargo = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+let _movimientosData = [];
+let _resumenCuentas  = [];
+let _resumenMensual  = [];
+let _resumenAnio     = new Date().getFullYear();
+let _nombreInstitucion = 'Cooperadora Escolar';
 
 async function logout() {
     await fetch('/api/auth/logout', {method:'POST'});
@@ -226,6 +262,8 @@ fetch('/api/auth/me').then(r=>r.json()).then(u=>{
     const primero = hoy.slice(0,7) + '-01';
     document.getElementById('filtroDesde').value = primero;
     document.getElementById('filtroHasta').value = hoy;
+    document.getElementById('resAnio').value = new Date().getFullYear();
+    fetch('/api/admin/parametros').then(r=>r.json()).then(p=>{ _nombreInstitucion = p.nombre_institucion || 'Cooperadora Escolar'; });
     cargarMovimientos();
     cargarCuentas();
 });
@@ -248,6 +286,7 @@ async function cargarMovimientos() {
     if (desde) params.set('desde', desde);
     if (hasta) params.set('hasta', hasta);
     const data = await fetch('/api/contabilidad/movimientos?' + params).then(r=>r.json());
+    _movimientosData = data || [];
     const tbody = document.getElementById('tablaMovimientos');
     tbody.innerHTML = '';
     let totIngreso = 0, totEgreso = 0;
@@ -387,37 +426,231 @@ async function guardarMovimiento() {
 }
 
 async function cargarResumen() {
-    const anio = document.getElementById('resAnio').value;
-    const [cuentas, mensual] = await Promise.all([
+    const anio = parseInt(document.getElementById('resAnio').value);
+    const [cuentas, mensualRaw] = await Promise.all([
         fetch('/api/contabilidad/resumen?anio=' + anio).then(r=>r.json()),
         fetch('/api/contabilidad/resumen/mensual?anio=' + anio).then(r=>r.json())
     ]);
-    const fmt = v => Number(v).toLocaleString('es-AR', {style:'currency', currency:'ARS', maximumFractionDigits:0});
+    _resumenCuentas = cuentas || [];
+    _resumenAnio    = anio;
+    const fmt = v => Number(v||0).toLocaleString('es-AR', {style:'currency', currency:'ARS', maximumFractionDigits:0});
 
-    // Resumen por cuenta
+    // --- Resumen por cuenta (fix: campo "nombre" no "nombre_cuenta") ---
     const sec = document.getElementById('resumenAnual');
     sec.innerHTML = '';
     const ingresos = (cuentas||[]).filter(c=>c.tipo==='INGRESO');
     const egresos  = (cuentas||[]).filter(c=>c.tipo==='EGRESO');
     const mkCard = (titulo, items, color) => {
-        let rows = items.map(i => `<tr class="border-t"><td class="py-1 text-gray-700">${i.nombre_cuenta}</td><td class="py-1 text-right font-mono">${fmt(i.total)}</td></tr>`).join('');
-        const total = items.reduce((s,i) => s + Number(i.total), 0);
+        const rows = items.map(i => `<tr class="border-t"><td class="py-1 text-gray-700">${i.nombre||'-'}</td><td class="py-1 text-right font-mono">${fmt(i.total)}</td></tr>`).join('');
+        const total = items.reduce((s,i) => s + Number(i.total||0), 0);
         return `<div class="bg-white rounded-xl shadow p-5"><h4 class="font-semibold ${color} mb-3">${titulo}</h4><table class="w-full text-sm">${rows}</table><div class="border-t mt-2 pt-2 flex justify-between font-bold"><span>Total</span><span class="font-mono">${fmt(total)}</span></div></div>`;
     };
     sec.innerHTML = mkCard('Ingresos', ingresos, 'text-green-700') + mkCard('Egresos', egresos, 'text-red-600');
 
-    // Resumen mensual
+    // --- Pivot mensual: [{mes, tipo, total}] → [{mes, ingreso, egreso}] ---
+    const mensualMap = {};
+    (mensualRaw||[]).forEach(r => {
+        const m = r.mes;
+        if (!mensualMap[m]) mensualMap[m] = {mes:m, ingreso:0, egreso:0};
+        if (r.tipo === 'INGRESO') mensualMap[m].ingreso = Number(r.total||0);
+        else mensualMap[m].egreso = Number(r.total||0);
+    });
+    const mensual = Object.values(mensualMap).sort((a,b)=>a.mes-b.mes);
+    _resumenMensual = mensual;
+
+    // --- Tabla mensual ---
     const tbody = document.getElementById('tablaResumenMensual');
     tbody.innerHTML = '';
-    (mensual||[]).forEach(r => {
-        const res = Number(r.total_ingresos) - Number(r.total_egresos);
+    mensual.forEach(r => {
+        const res = r.ingreso - r.egreso;
         tbody.innerHTML += `<tr class="hover:bg-gray-50">
-            <td class="px-4 py-2">${meses[r.mes - 1]||r.mes}</td>
-            <td class="px-4 py-2 text-right text-green-700 font-mono">${fmt(r.total_ingresos)}</td>
-            <td class="px-4 py-2 text-right text-red-600 font-mono">${fmt(r.total_egresos)}</td>
-            <td class="px-4 py-2 text-right font-mono font-bold ${res >= 0 ? 'text-blue-700' : 'text-yellow-600'}">${fmt(res)}</td>
+            <td class="px-4 py-2">${meses[r.mes-1]||r.mes}</td>
+            <td class="px-4 py-2 text-right text-green-700 font-mono">${fmt(r.ingreso)}</td>
+            <td class="px-4 py-2 text-right text-red-600 font-mono">${fmt(r.egreso)}</td>
+            <td class="px-4 py-2 text-right font-mono font-bold ${res>=0?'text-blue-700':'text-yellow-600'}">${fmt(res)}</td>
         </tr>`;
     });
+
+    // --- Gráficos ---
+    const COLORS_ING = ['#16a34a','#4ade80','#86efac','#bbf7d0','#22c55e','#15803d'];
+    const COLORS_EGR = ['#dc2626','#f87171','#fca5a5','#fecaca','#ef4444','#b91c1c'];
+
+    _destroyChart('chartIngresos');
+    _destroyChart('chartEgresos');
+    _destroyChart('chartLinea');
+    _destroyChart('chartResultado');
+
+    // Pie ingresos
+    if (ingresos.length) {
+        _charts['chartIngresos'] = new Chart(document.getElementById('chartIngresos'), {
+            type: 'doughnut',
+            data: {
+                labels: ingresos.map(i=>i.nombre||'-'),
+                datasets: [{data: ingresos.map(i=>Number(i.total||0)), backgroundColor: COLORS_ING, borderWidth:1}]
+            },
+            options: {plugins:{legend:{position:'bottom'}}, maintainAspectRatio:false}
+        });
+    }
+    // Pie egresos
+    if (egresos.length) {
+        _charts['chartEgresos'] = new Chart(document.getElementById('chartEgresos'), {
+            type: 'doughnut',
+            data: {
+                labels: egresos.map(i=>i.nombre||'-'),
+                datasets: [{data: egresos.map(i=>Number(i.total||0)), backgroundColor: COLORS_EGR, borderWidth:1}]
+            },
+            options: {plugins:{legend:{position:'bottom'}}, maintainAspectRatio:false}
+        });
+    }
+    // Línea ingresos vs egresos
+    const mesLabels = mensual.map(r=>meses[r.mes-1]||r.mes);
+    _charts['chartLinea'] = new Chart(document.getElementById('chartLinea'), {
+        type: 'line',
+        data: {
+            labels: mesLabels,
+            datasets: [
+                {label:'Ingresos', data: mensual.map(r=>r.ingreso), borderColor:'#16a34a', backgroundColor:'rgba(22,163,74,0.1)', tension:0.3, fill:true},
+                {label:'Egresos',  data: mensual.map(r=>r.egreso),  borderColor:'#dc2626', backgroundColor:'rgba(220,38,38,0.1)', tension:0.3, fill:true}
+            ]
+        },
+        options: {maintainAspectRatio:false, plugins:{legend:{position:'top'}}, scales:{y:{beginAtZero:true}}}
+    });
+    // Barras resultado neto
+    _charts['chartResultado'] = new Chart(document.getElementById('chartResultado'), {
+        type: 'bar',
+        data: {
+            labels: mesLabels,
+            datasets: [{
+                label: 'Resultado neto',
+                data: mensual.map(r=>r.ingreso - r.egreso),
+                backgroundColor: mensual.map(r=>(r.ingreso-r.egreso)>=0 ? 'rgba(37,99,235,0.7)' : 'rgba(234,179,8,0.7)'),
+                borderRadius: 4
+            }]
+        },
+        options: {maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}}}
+    });
+
+    // Actualizar año actual en el input
+    document.getElementById('resAnio').value = anio;
+}
+
+const _charts = {};
+function _destroyChart(id) {
+    if (_charts[id]) { _charts[id].destroy(); delete _charts[id]; }
+}
+
+// -------- Impresión --------
+const _printStyle = `
+    <style>
+        body{font-family:Arial,sans-serif;margin:20px;color:#111;}
+        h1{font-size:18px;font-weight:bold;color:#1e3a5f;margin-bottom:4px;}
+        h2{font-size:14px;font-weight:bold;color:#1e3a5f;margin:16px 0 6px;}
+        .sub{font-size:11px;color:#666;margin-bottom:14px;}
+        table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:16px;}
+        th{background:#e0ecff;color:#1e3a5f;text-align:left;padding:6px 8px;border-bottom:2px solid #b0c4de;}
+        td{padding:5px 8px;border-bottom:1px solid #e5e7eb;}
+        tr:nth-child(even) td{background:#f9fafb;}
+        .ingreso{color:#15803d;font-weight:bold;}
+        .egreso{color:#dc2626;font-weight:bold;}
+        .total-row td{font-weight:bold;background:#f0f4ff;border-top:2px solid #b0c4de;}
+        .positivo{color:#1d4ed8;font-weight:bold;}
+        .negativo{color:#ca8a04;font-weight:bold;}
+        .text-right{text-align:right;}
+        .no-print{cursor:pointer;background:#1e40af;color:#fff;border:none;padding:8px 20px;border-radius:6px;font-size:13px;margin-bottom:16px;}
+        @media print{.no-print{display:none!important;} @page{margin:12mm;}}
+    </style>`;
+
+function _printWindow(html) {
+    const win = window.open('','_blank','width=900,height=700');
+    win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8">' + _printStyle + '</head><body>');
+    win.document.write('<button class="no-print" onclick="window.print()">🖨 Imprimir / PDF</button>');
+    win.document.write(html);
+    win.document.write('</body></html>');
+    win.document.close();
+}
+
+function imprimirMovimientos() {
+    const fmt = v => Number(v||0).toLocaleString('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0});
+    const desde = document.getElementById('filtroDesde').value || '';
+    const hasta  = document.getElementById('filtroHasta').value || '';
+    let totIng = 0, totEgr = 0;
+    let rows = (_movimientosData||[]).map(m => {
+        const cls = m.tipo === 'INGRESO' ? 'ingreso' : 'egreso';
+        if (m.tipo === 'INGRESO') totIng += Number(m.monto||0);
+        else totEgr += Number(m.monto||0);
+        return `<tr>
+            <td>${m.fecha}</td>
+            <td>${m.codigo_cuenta||''} ${m.nombre_cuenta||''}</td>
+            <td>${m.descripcion||''}</td>
+            <td class="${cls}">${m.tipo}</td>
+            <td>${m.medio_pago||'-'}</td>
+            <td class="text-right font-mono">${fmt(m.monto)}</td>
+        </tr>`;
+    }).join('');
+    const resultado = totIng - totEgr;
+    const html = `
+        <h1>${_nombreInstitucion}</h1>
+        <div class="sub">Movimientos contables${desde ? ' — Desde '+desde : ''}${hasta ? ' hasta '+hasta : ''}</div>
+        <table>
+            <thead><tr>
+                <th>Fecha</th><th>Cuenta</th><th>Descripción</th><th>Tipo</th><th>Medio</th><th class="text-right">Monto</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+            <tfoot>
+                <tr class="total-row"><td colspan="5">Total Ingresos</td><td class="text-right ingreso">${fmt(totIng)}</td></tr>
+                <tr class="total-row"><td colspan="5">Total Egresos</td><td class="text-right egreso">${fmt(totEgr)}</td></tr>
+                <tr class="total-row"><td colspan="5">Resultado</td><td class="text-right ${resultado>=0?'positivo':'negativo'}">${fmt(resultado)}</td></tr>
+            </tfoot>
+        </table>`;
+    _printWindow(html);
+}
+
+function imprimirResumen() {
+    const fmt = v => Number(v||0).toLocaleString('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0});
+    const ingresos = (_resumenCuentas||[]).filter(c=>c.tipo==='INGRESO');
+    const egresos  = (_resumenCuentas||[]).filter(c=>c.tipo==='EGRESO');
+    const totIng = ingresos.reduce((s,i)=>s+Number(i.total||0),0);
+    const totEgr = egresos.reduce((s,i)=>s+Number(i.total||0),0);
+    const resultado = totIng - totEgr;
+
+    const mkTable = (titulo, items, cls) => {
+        const rows = items.map(i=>`<tr><td>${i.nombre||'-'}</td><td class="text-right">${fmt(i.total)}</td></tr>`).join('');
+        const tot  = items.reduce((s,i)=>s+Number(i.total||0),0);
+        return `<h2>${titulo}</h2><table>
+            <thead><tr><th>Cuenta</th><th class="text-right">Total</th></tr></thead>
+            <tbody>${rows}</tbody>
+            <tfoot><tr class="total-row"><td>Total</td><td class="text-right ${cls}">${fmt(tot)}</td></tr></tfoot>
+        </table>`;
+    };
+
+    const mensualRows = (_resumenMensual||[]).map(r=>{
+        const res = r.ingreso - r.egreso;
+        return `<tr>
+            <td>${mesesLargo[r.mes-1]||r.mes}</td>
+            <td class="text-right ingreso">${fmt(r.ingreso)}</td>
+            <td class="text-right egreso">${fmt(r.egreso)}</td>
+            <td class="text-right ${res>=0?'positivo':'negativo'}">${fmt(res)}</td>
+        </tr>`;
+    }).join('');
+
+    const html = `
+        <h1>${_nombreInstitucion}</h1>
+        <div class="sub">Resumen Anual ${_resumenAnio}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+            <div>${mkTable('Ingresos', ingresos, 'ingreso')}</div>
+            <div>${mkTable('Egresos', egresos, 'egreso')}</div>
+        </div>
+        <table style="width:auto;margin-top:8px">
+            <tr class="total-row"><td style="padding:6px 20px">Total Ingresos</td><td class="text-right ingreso" style="padding:6px 20px">${fmt(totIng)}</td></tr>
+            <tr class="total-row"><td style="padding:6px 20px">Total Egresos</td><td class="text-right egreso" style="padding:6px 20px">${fmt(totEgr)}</td></tr>
+            <tr class="total-row"><td style="padding:6px 20px">Resultado neto</td><td class="text-right ${resultado>=0?'positivo':'negativo'}" style="padding:6px 20px">${fmt(resultado)}</td></tr>
+        </table>
+        <h2>Evolución Mensual</h2>
+        <table>
+            <thead><tr><th>Mes</th><th class="text-right">Ingresos</th><th class="text-right">Egresos</th><th class="text-right">Resultado</th></tr></thead>
+            <tbody>${mensualRows}</tbody>
+        </table>`;
+    _printWindow(html);
 }
 </script>
 </body>

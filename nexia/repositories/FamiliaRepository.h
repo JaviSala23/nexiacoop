@@ -2,6 +2,7 @@
 #include <functional>
 #include <vector>
 #include <string>
+#include <json/json.h>
 #include "../models/Familia.h"
 #include "../models/Tutor.h"
 #include "../models/Alumno.h"
@@ -51,6 +52,26 @@ public:
     // Alumnos
     static void listarAlumnos(int idFamilia,
         std::function<void(std::vector<Alumno>)> callback,
+        std::function<void(const std::string&)> errCallback);
+
+    static void listarTodosAlumnos(const std::string& estado, const std::string& anioEscolar,
+        std::function<void(std::vector<Alumno>)> callback,
+        std::function<void(const std::string&)> errCallback);
+
+    static void statsAlumnos(
+        std::function<void(Json::Value)> callback,
+        std::function<void(const std::string&)> errCallback);
+
+    static void promoverGrados(
+        std::function<void(int, int, int)> callback,
+        std::function<void(const std::string&)> errCallback);
+
+    static void revertirPromocion(
+        std::function<void(bool, std::string)> callback,
+        std::function<void(const std::string&)> errCallback);
+
+    static void estadoUltimaPromocion(
+        std::function<void(bool, std::string)> callback,
         std::function<void(const std::string&)> errCallback);
 
     static void insertarAlumno(const Alumno& a,

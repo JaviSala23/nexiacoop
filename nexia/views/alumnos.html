@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexia - Alumnos</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex">
+<aside class="w-64 bg-blue-900 text-white flex flex-col min-h-screen fixed">
+    <div class="p-6 border-b border-blue-700"><h1 class="text-2xl font-bold">NEXIA</h1><p class="text-blue-300 text-xs">Gestión Cooperadora</p></div>
+    <nav class="flex-1 p-4 space-y-1">
+        <a href="/dashboard"   class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">🏠 Dashboard</a>
+        <a href="/familias"    class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">👨‍👩‍👧 Familias</a>
+        <a href="/alumnos"     class="flex items-center gap-3 px-4 py-2 rounded-lg bg-blue-700 font-medium">🎒 Alumnos</a>
+        <a href="/talones"     class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">🧾 Talones</a>
+        <a href="/pagos"       class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">💳 Pagos</a>
+        <a href="/conceptos"   class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">📋 Conceptos</a>
+        <a href="/contabilidad" class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">📊 Contabilidad</a>
+        <a href="/admin"       class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">⚙️ Admin</a>
+    </nav>
+    <div class="p-4 border-t border-blue-700"><button onclick="logout()" class="text-sm text-red-300 hover:text-red-200">Cerrar sesión</button></div>
+</aside>
+
+<main class="ml-64 flex-1 p-8">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold text-blue-900">Alumnos</h2>
+        <div class="flex gap-3 items-center">
+            <button id="btn-revertir" onclick="abrirModalRevertir()" disabled
+                class="bg-gray-100 text-gray-400 border border-gray-300 px-4 py-2 rounded-lg font-medium flex items-center gap-2 text-sm cursor-not-allowed opacity-60"
+                title="No hay pase para revertir">
+                ↩ Revertir último pase
+            </button>
+            <button onclick="abrirModalPromover()" class="bg-amber-500 hover:bg-amber-600 text-white px-5 py-2 rounded-lg font-semibold flex items-center gap-2 shadow">
+                🎓 Pase de Año
+            </button>
+        </div>
+    </div>
+
+    <!-- ===== DASHBOARD ESTADÍSTICO ===== -->
+    <div id="dashboard" class="mb-8">
+        <!-- Tarjetas resumen -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-blue-600 text-white rounded-xl p-4 shadow">
+                <div class="text-3xl font-bold" id="stat-activos">—</div>
+                <div class="text-sm opacity-80 mt-1">Alumnos activos</div>
+            </div>
+            <div class="bg-green-600 text-white rounded-xl p-4 shadow">
+                <div class="text-3xl font-bold" id="stat-familias">—</div>
+                <div class="text-sm opacity-80 mt-1">Familias activas</div>
+            </div>
+            <div class="bg-indigo-600 text-white rounded-xl p-4 shadow">
+                <div class="text-3xl font-bold" id="stat-promedio">—</div>
+                <div class="text-sm opacity-80 mt-1">Hijos promedio/familia</div>
+            </div>
+            <div class="bg-gray-500 text-white rounded-xl p-4 shadow">
+                <div class="text-3xl font-bold" id="stat-egresados">—</div>
+                <div class="text-sm opacity-80 mt-1">Egresados</div>
+            </div>
+        </div>
+
+        <!-- Distribución por grado -->
+        <div class="bg-white rounded-xl shadow p-5 mb-6">
+            <h3 class="font-semibold text-blue-800 mb-4 text-sm uppercase tracking-wide">Alumnos por grado</h3>
+            <div id="barras-grado" class="space-y-2"></div>
+        </div>
+
+        <!-- Distribución hijos por familia -->
+        <div class="bg-white rounded-xl shadow p-5">
+            <h3 class="font-semibold text-blue-800 mb-4 text-sm uppercase tracking-wide">Distribución: hijos por familia</h3>
+            <div id="dist-familia" class="flex flex-wrap gap-3"></div>
+        </div>
+    </div>
+
+    <!-- ===== FILTROS Y LISTADOS ===== -->
+    <div class="bg-white rounded-xl shadow p-5 mb-4">
+        <div class="flex flex-wrap gap-4 items-end">
+            <div>
+                <label class="text-xs text-gray-500 block mb-1">Estado</label>
+                <select id="filtEstado" class="border rounded px-3 py-2 text-sm">
+                    <option value="ACTIVO" selected>Activos</option>
+                    <option value="INACTIVO">Inactivos</option>
+                    <option value="EGRESADO">Egresados</option>
+                    <option value="">Todos</option>
+                </select>
+            </div>
+            <div>
+                <label class="text-xs text-gray-500 block mb-1">Grado</label>
+                <select id="filtGrado" class="border rounded px-3 py-2 text-sm">
+                    <option value="">Todos los grados</option>
+                </select>
+            </div>
+            <div>
+                <label class="text-xs text-gray-500 block mb-1">Vista</label>
+                <select id="filtVista" class="border rounded px-3 py-2 text-sm" onchange="renderLista()">
+                    <option value="grado">Por grado</option>
+                    <option value="familia">Por familia</option>
+                    <option value="completo">Lista completa</option>
+                    <option value="sin_familia">Sin agrupación</option>
+                </select>
+            </div>
+            <button onclick="cargarAlumnos()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm">
+                Actualizar
+            </button>
+            <button onclick="imprimir()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm flex items-center gap-2">
+                🖨️ Imprimir / PDF
+            </button>
+        </div>
+    </div>
+
+    <div id="resumen" class="text-sm text-gray-400 mb-3"></div>
+
+    <!-- Tabla/Lista -->
+    <div id="contenido-lista" class="space-y-4"></div>
+</main>
+
+<!-- ===== MODAL PASE DE AÑO ===== -->
+<div id="modal-promover" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-8">
+        <h3 class="text-xl font-bold text-blue-900 mb-2">Pase de Año</h3>
+        <p class="text-sm text-gray-500 mb-5">Este proceso avanza a todos los alumnos activos un grado. Los alumnos del último grado pasan a estado <strong>EGRESADO</strong>. Si una familia queda sin alumnos activos, también se inactiva.</p>
+
+        <!-- Diagrama de progresión -->
+        <div class="bg-blue-50 rounded-xl p-4 mb-5">
+            <div class="text-xs font-semibold text-blue-700 mb-2 uppercase tracking-wide">Progresión de grados</div>
+            <div id="diagrama-grados" class="flex flex-wrap gap-1 items-center text-xs text-gray-700"></div>
+        </div>
+
+        <!-- Confirmación -->
+        <label class="flex items-start gap-3 cursor-pointer mb-6">
+            <input type="checkbox" id="chk-confirm" class="mt-1 w-4 h-4 accent-amber-500" onchange="document.getElementById('btn-promover').disabled = !this.checked">
+            <span class="text-sm text-gray-700">Entiendo que este proceso es <strong>irreversible</strong> y afectará a todos los alumnos activos.</span>
+        </label>
+
+        <div class="flex gap-3 justify-end">
+            <button onclick="cerrarModalPromover()" class="px-5 py-2 rounded-lg border text-gray-600 hover:bg-gray-50 text-sm">Cancelar</button>
+            <button id="btn-promover" onclick="ejecutarPromocion()" disabled class="px-5 py-2 rounded-lg bg-amber-500 text-white font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-amber-600 text-sm">
+                Confirmar Pase de Año
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== MODAL RESULTADO ===== -->
+<div id="modal-resultado" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 text-center">
+        <div class="text-5xl mb-4">🎓</div>
+        <h3 class="text-xl font-bold text-blue-900 mb-4">¡Pase de año realizado!</h3>
+        <div id="resultado-detalle" class="grid grid-cols-3 gap-3 mb-6"></div>
+        <button onclick="cerrarModalResultado()" class="bg-blue-600 text-white px-8 py-2 rounded-lg hover:bg-blue-700 font-semibold">
+            Aceptar
+        </button>
+    </div>
+</div>
+
+<!-- ===== MODAL REVERTIR ===== -->
+<div id="modal-revertir" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
+        <div class="text-4xl mb-3 text-center">↩</div>
+        <h3 class="text-xl font-bold text-red-700 mb-2 text-center">Revertir último pase de año</h3>
+        <div id="revertir-info" class="bg-red-50 border border-red-200 rounded-xl p-4 mb-5 text-sm text-gray-700"></div>
+        <p class="text-sm text-gray-500 mb-5">Esta acción restaurará el grado y estado de todos los alumnos afectados, y reactivará las familias que se inactivaron en ese pase.</p>
+        <label class="flex items-start gap-3 cursor-pointer mb-6">
+            <input type="checkbox" id="chk-confirm-revertir" class="mt-1 w-4 h-4 accent-red-500" onchange="document.getElementById('btn-confirmar-revertir').disabled = !this.checked">
+            <span class="text-sm text-gray-700">Confirmo que quiero revertir el último pase de año.</span>
+        </label>
+        <div class="flex gap-3 justify-end">
+            <button onclick="cerrarModalRevertir()" class="px-5 py-2 rounded-lg border text-gray-600 hover:bg-gray-50 text-sm">Cancelar</button>
+            <button id="btn-confirmar-revertir" onclick="ejecutarReversion()" disabled class="px-5 py-2 rounded-lg bg-red-600 text-white font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-red-700 text-sm">
+                Revertir
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+let alumnosCargados = [];
+let cursosCargados  = [];
+let parametrosSistema = {};
+let ultimaPromocion = null;
+
+async function logout() { await fetch('/api/auth/logout',{method:'POST'}); window.location.href='/login'; }
+
+async function init() {
+    const [rc, rp] = await Promise.all([
+        fetch('/api/admin/cursos'),
+        fetch('/api/admin/parametros')
+    ]);
+    cursosCargados    = (await rc.json()).filter(c => c.activo).sort((a,b) => a.orden - b.orden);
+    parametrosSistema = await rp.json();
+
+    // Llenar filtro grado
+    const sg = document.getElementById('filtGrado');
+    sg.innerHTML = '<option value="">Todos los grados</option>' +
+        cursosCargados.map(c => `<option value="${esc(c.nombre)}">${esc(c.nombre)}</option>`).join('');
+
+    await Promise.all([cargarStats(), cargarAlumnos(), verificarReversion()]);
+}
+
+// -------------------------------------------------------
+// STATS
+// -------------------------------------------------------
+async function cargarStats() {
+    const r = await fetch('/api/alumnos/stats');
+    const s = await r.json();
+
+    document.getElementById('stat-activos').textContent   = s.total_activos   ?? 0;
+    document.getElementById('stat-familias').textContent  = s.familias_activas ?? 0;
+    document.getElementById('stat-promedio').textContent  = s.promedio_por_familia != null ? Number(s.promedio_por_familia).toFixed(1) : '0.0';
+    document.getElementById('stat-egresados').textContent = s.total_egresados  ?? 0;
+
+    // Barras por grado
+    const maxCant = Math.max(1, ...(s.por_grado||[]).map(g => g.cantidad));
+    document.getElementById('barras-grado').innerHTML = (s.por_grado||[]).map(g => `
+        <div class="flex items-center gap-3">
+            <div class="text-xs text-gray-600 w-32 text-right shrink-0">${esc(g.grado)}</div>
+            <div class="flex-1 bg-gray-100 rounded-full h-5 relative">
+                <div class="bg-blue-500 h-5 rounded-full transition-all" style="width:${g.cantidad ? Math.max(2, Math.round(g.cantidad/maxCant*100)) : 0}%"></div>
+            </div>
+            <div class="text-sm font-bold text-blue-800 w-8 text-right">${g.cantidad}</div>
+        </div>`).join('') || '<p class="text-xs text-gray-400">Sin datos</p>';
+
+    // Distribución hijos por familia
+    document.getElementById('dist-familia').innerHTML = (s.dist_hijos_por_familia||[]).map(d => `
+        <div class="bg-indigo-50 border border-indigo-200 rounded-xl px-5 py-3 text-center">
+            <div class="text-2xl font-bold text-indigo-700">${d.cantidad}</div>
+            <div class="text-xs text-gray-500">${d.cantidad === 1 ? 'hijo' : 'hijos'}</div>
+            <div class="text-sm font-semibold text-gray-700 mt-1">${d.familias} <span class="font-normal text-gray-400">${d.familias === 1 ? 'familia' : 'familias'}</span></div>
+        </div>`).join('') || '<p class="text-xs text-gray-400">Sin datos</p>';
+}
+
+// -------------------------------------------------------
+// LISTADOS
+// -------------------------------------------------------
+async function cargarAlumnos() {
+    const estado = document.getElementById('filtEstado').value;
+    const grado  = document.getElementById('filtGrado').value;
+    const p = new URLSearchParams();
+    if (estado) p.set('estado', estado);
+    if (grado)  p.set('grado', grado);
+    const r = await fetch('/api/alumnos?' + p);
+    alumnosCargados = await r.json();
+    renderLista();
+}
+
+function renderLista() {
+    const vista = document.getElementById('filtVista').value;
+    const cont  = document.getElementById('contenido-lista');
+    document.getElementById('resumen').textContent = `Total: ${alumnosCargados.length} alumno(s)`;
+
+    if (vista === 'grado')        renderPorGrado(cont);
+    else if (vista === 'familia') renderPorFamilia(cont);
+    else if (vista === 'completo') renderCompleto(cont);
+    else                           renderSinAgrupacion(cont);
+}
+
+function renderPorGrado(cont) {
+    // Agrupamos por anio_escolar respetando el orden de cursos
+    const grupos = {};
+    alumnosCargados.forEach(a => {
+        const k = a.anio_escolar || 'Sin grado';
+        if (!grupos[k]) grupos[k] = [];
+        grupos[k].push(a);
+    });
+    // Ordenar grupos según el orden de cursos
+    const cursoOrden = {};
+    cursosCargados.forEach(c => { cursoOrden[c.nombre] = c.orden; });
+    const keys = Object.keys(grupos).sort((a,b) => (cursoOrden[a]??999) - (cursoOrden[b]??999));
+
+    cont.innerHTML = keys.map(grado => `
+        <div class="bg-white rounded-xl shadow overflow-hidden">
+            <div class="flex justify-between items-center bg-blue-50 px-5 py-3 border-b border-blue-100">
+                <span class="font-bold text-blue-800 text-sm">🎒 ${esc(grado)}</span>
+                <span class="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-semibold">${grupos[grado].length} alumno(s)</span>
+            </div>
+            ${tablaAlumnos(grupos[grado], 'grado')}
+        </div>`).join('') || sinResultados();
+}
+
+function renderPorFamilia(cont) {
+    const grupos = {};
+    alumnosCargados.forEach(a => {
+        const k = a.numero_familia || '?';
+        if (!grupos[k]) grupos[k] = { lista: [], tutor: a.nombre_tutor_principal || '' };
+        grupos[k].lista.push(a);
+    });
+    const keys = Object.keys(grupos).sort((a,b) => Number(a) - Number(b));
+
+    cont.innerHTML = keys.map(nf => `
+        <div class="bg-white rounded-xl shadow overflow-hidden">
+            <div class="flex justify-between items-center bg-green-50 px-5 py-3 border-b border-green-100">
+                <span class="font-bold text-green-800 text-sm">👨‍👩‍👧 Familia N° ${esc(String(nf))}
+                    ${grupos[nf].tutor ? `<span class="font-normal text-green-600 ml-2 text-xs">— ${esc(grupos[nf].tutor)}</span>` : ''}
+                </span>
+                <span class="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full font-semibold">${grupos[nf].lista.length} alumno(s)</span>
+            </div>
+            ${tablaAlumnos(grupos[nf].lista, 'familia')}
+        </div>`).join('') || sinResultados();
+}
+
+function renderCompleto(cont) {
+    cont.innerHTML = `
+        <div class="bg-white rounded-xl shadow overflow-hidden">
+            ${tablaAlumnos(alumnosCargados, 'completo')}
+        </div>` || sinResultados();
+}
+
+function renderSinAgrupacion(cont) {
+    // Lista simple solo nombres ordenados alfabéticamente
+    const lista = [...alumnosCargados].sort((a,b) => a.nombre_completo.localeCompare(b.nombre_completo));
+    cont.innerHTML = `
+        <div class="bg-white rounded-xl shadow overflow-hidden">
+            <table class="w-full text-sm">
+                <thead class="bg-blue-50 text-blue-800 font-semibold"><tr>
+                    <th class="px-4 py-3 text-left">#</th>
+                    <th class="px-4 py-3 text-left">Apellido y Nombre</th>
+                    <th class="px-4 py-3 text-left">DNI</th>
+                    <th class="px-4 py-3 text-left">Grado</th>
+                    <th class="px-4 py-3 text-left">Estado</th>
+                </tr></thead>
+                <tbody class="divide-y divide-gray-100 text-xs">
+                ${lista.length ? lista.map((a,i) => `
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-400">${i+1}</td>
+                        <td class="px-4 py-2 font-medium">${esc(a.nombre_completo)}</td>
+                        <td class="px-4 py-2">${esc(a.dni||'—')}</td>
+                        <td class="px-4 py-2">${esc(a.anio_escolar||'—')}</td>
+                        <td class="px-4 py-2">${estadoBadge(a.estado)}</td>
+                    </tr>`).join('') : '<tr><td colspan="5" class="text-center py-6 text-gray-400">Sin resultados</td></tr>'}
+                </tbody>
+            </table>
+        </div>`;
+}
+
+function tablaAlumnos(lista, vista) {
+    const mostrarGrado   = vista !== 'grado';
+    const mostrarFamilia = vista !== 'familia';
+    return `<table class="w-full text-sm">
+        <thead class="bg-gray-50 text-gray-600 font-semibold text-xs uppercase"><tr>
+            ${mostrarFamilia ? '<th class="px-4 py-2 text-left">Familia</th>' : ''}
+            <th class="px-4 py-2 text-left">Apellido y Nombre</th>
+            <th class="px-4 py-2 text-left">DNI</th>
+            ${mostrarGrado ? '<th class="px-4 py-2 text-left">Grado</th>' : ''}
+            ${vista === 'completo' ? '<th class="px-4 py-2 text-left">Tutor</th>' : ''}
+            <th class="px-4 py-2 text-left">Estado</th>
+        </tr></thead>
+        <tbody class="divide-y divide-gray-100 text-xs">
+        ${lista.length ? lista.map(a => `
+            <tr class="hover:bg-gray-50">
+                ${mostrarFamilia ? `<td class="px-4 py-2 text-gray-400 font-mono">${a.numero_familia||'—'}</td>` : ''}
+                <td class="px-4 py-2 font-medium">${esc(a.nombre_completo)}</td>
+                <td class="px-4 py-2">${esc(a.dni||'—')}</td>
+                ${mostrarGrado ? `<td class="px-4 py-2">${esc(a.anio_escolar||'—')}</td>` : ''}
+                ${vista === 'completo' ? `<td class="px-4 py-2 text-gray-500">${esc(a.nombre_tutor_principal||'—')}</td>` : ''}
+                <td class="px-4 py-2">${estadoBadge(a.estado)}</td>
+            </tr>`).join('') : '<tr><td colspan="6" class="text-center py-4 text-gray-400">Sin resultados</td></tr>'}
+        </tbody>
+    </table>`;
+}
+
+function estadoBadge(e) {
+    const map = { ACTIVO:'bg-green-100 text-green-700', INACTIVO:'bg-gray-100 text-gray-500', EGRESADO:'bg-purple-100 text-purple-700' };
+    return `<span class="px-2 py-0.5 rounded-full text-xs font-semibold ${map[e]||'bg-gray-100 text-gray-500'}">${e}</span>`;
+}
+
+function sinResultados() {
+    return '<div class="bg-white rounded-xl shadow p-8 text-center text-gray-400 text-sm">Sin resultados</div>';
+}
+
+// -------------------------------------------------------
+// MODAL PASE DE AÑO
+// -------------------------------------------------------
+function abrirModalPromover() {
+    document.getElementById('chk-confirm').checked = false;
+    document.getElementById('btn-promover').disabled = true;
+
+    // Diagrama de progresión
+    const diag = document.getElementById('diagrama-grados');
+    if (cursosCargados.length === 0) {
+        diag.innerHTML = '<span class="text-gray-400">No hay cursos configurados.</span>';
+    } else {
+        const items = cursosCargados.map((c, i) => {
+            const esUltimo = i === cursosCargados.length - 1;
+            return `<span class="flex items-center gap-1">
+                <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded font-medium">${esc(c.nombre)}</span>
+                ${esUltimo
+                    ? '<span class="text-red-500 font-bold ml-1">→ EGRESADO</span>'
+                    : (i < cursosCargados.length - 1 ? '<span class="text-gray-400">→</span>' : '')
+                }
+            </span>`;
+        });
+        diag.innerHTML = items.join('');
+    }
+
+    document.getElementById('modal-promover').classList.remove('hidden');
+}
+
+function cerrarModalPromover() {
+    document.getElementById('modal-promover').classList.add('hidden');
+}
+
+async function ejecutarPromocion() {
+    document.getElementById('btn-promover').disabled = true;
+    document.getElementById('btn-promover').textContent = 'Procesando...';
+
+    const r = await fetch('/api/alumnos/promover', { method: 'POST' });
+    const res = await r.json();
+
+    cerrarModalPromover();
+
+    if (res.ok) {
+        document.getElementById('resultado-detalle').innerHTML = `
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-3">
+                <div class="text-2xl font-bold text-amber-700">${res.promovidos}</div>
+                <div class="text-xs text-gray-500 mt-1">Alumnos<br>promovidos</div>
+            </div>
+            <div class="bg-purple-50 border border-purple-200 rounded-xl p-3">
+                <div class="text-2xl font-bold text-purple-700">${res.egresados}</div>
+                <div class="text-xs text-gray-500 mt-1">Alumnos<br>egresados</div>
+            </div>
+            <div class="bg-gray-50 border border-gray-200 rounded-xl p-3">
+                <div class="text-2xl font-bold text-gray-600">${res.familias_inactivadas}</div>
+                <div class="text-xs text-gray-500 mt-1">Familias<br>inactivadas</div>
+            </div>`;
+        document.getElementById('modal-resultado').classList.remove('hidden');
+    } else {
+        alert('Error: ' + (res.error || 'Ocurrió un problema'));
+    }
+}
+
+function cerrarModalResultado() {
+    document.getElementById('modal-resultado').classList.add('hidden');
+    // Recargar datos y verificar si ahora hay opción de revertir
+    cargarStats();
+    cargarAlumnos();
+    verificarReversion();
+}
+
+// -------------------------------------------------------
+// REVERTIR ÚLTIMO PASE
+// -------------------------------------------------------
+async function verificarReversion() {
+    const btn = document.getElementById('btn-revertir');
+    try {
+        const r = await fetch('/api/alumnos/ultima-promocion');
+        const d = await r.json();
+        ultimaPromocion = d.existe ? d : null;
+        if (d.existe) {
+            const fecha = new Date(d.fecha_ejecucion).toLocaleDateString('es-AR');
+            btn.disabled = false;
+            btn.title = `Revertir pase del ${fecha}`;
+            btn.className = 'bg-red-100 hover:bg-red-200 text-red-700 border border-red-300 px-4 py-2 rounded-lg font-medium flex items-center gap-2 text-sm cursor-pointer';
+        } else {
+            btn.disabled = true;
+            btn.title = 'No hay pase para revertir';
+            btn.className = 'bg-gray-100 text-gray-400 border border-gray-300 px-4 py-2 rounded-lg font-medium flex items-center gap-2 text-sm cursor-not-allowed opacity-60';
+        }
+    } catch(e) {
+        console.error('verificarReversion error:', e);
+        btn.disabled = true;
+        btn.title = 'No hay pase para revertir';
+    }
+}
+
+function abrirModalRevertir() {
+    if (!ultimaPromocion) return;
+    document.getElementById('chk-confirm-revertir').checked = false;
+    document.getElementById('btn-confirmar-revertir').disabled = true;
+    const fecha = new Date(ultimaPromocion.fecha_ejecucion).toLocaleString('es-AR');
+    document.getElementById('revertir-info').innerHTML = `
+        <div class="font-semibold text-red-700 mb-2">Último pase realizado:</div>
+        <div class="grid grid-cols-3 gap-2 text-center">
+            <div><div class="text-lg font-bold text-amber-600">${ultimaPromocion.promovidos}</div><div class="text-xs text-gray-500">Promovidos</div></div>
+            <div><div class="text-lg font-bold text-purple-600">${ultimaPromocion.egresados}</div><div class="text-xs text-gray-500">Egresados</div></div>
+            <div><div class="text-lg font-bold text-gray-600">${ultimaPromocion.familias_inactiv}</div><div class="text-xs text-gray-500">Familias inactivadas</div></div>
+        </div>
+        <div class="text-xs text-gray-400 mt-2 text-right">Fecha: ${esc(fecha)}</div>`;
+    document.getElementById('modal-revertir').classList.remove('hidden');
+}
+
+function cerrarModalRevertir() {
+    document.getElementById('modal-revertir').classList.add('hidden');
+}
+
+async function ejecutarReversion() {
+    document.getElementById('btn-confirmar-revertir').disabled = true;
+    document.getElementById('btn-confirmar-revertir').textContent = 'Revirtiendo...';
+    const r = await fetch('/api/alumnos/revertir-promocion', { method: 'POST' });
+    const res = await r.json();
+    cerrarModalRevertir();
+    if (res.ok) {
+        alert('✅ ' + res.mensaje);
+        verificarReversion();
+        cargarStats();
+        cargarAlumnos();
+    } else {
+        alert('Error: ' + (res.error || res.mensaje || 'Ocurrió un problema'));
+    }
+}
+
+
+// -------------------------------------------------------
+// IMPRESIÓN
+// -------------------------------------------------------
+function imprimir() {
+    if (!alumnosCargados.length) { alert('No hay alumnos para imprimir.'); return; }
+    const vista  = document.getElementById('filtVista').value;
+    const estado = document.getElementById('filtEstado').value || 'Todos';
+    const grado  = document.getElementById('filtGrado').value  || 'Todos los grados';
+    const p = parametrosSistema;
+    const asocNombre = p.nombre_institucion || 'NEXIA';
+    const asocDatos  = [p.domicilio, p.localidad, p.provincia].filter(Boolean).join(' · ');
+    const logoHtml   = p.logo_url ? `<img src="${escH(p.logo_url)}" style="max-height:22mm;max-width:38mm;object-fit:contain;" alt="Logo">` : '';
+    const fecha = new Date().toLocaleDateString('es-AR', {day:'2-digit',month:'2-digit',year:'numeric'});
+
+    let cuerpoHtml = '';
+    const tituloVista = {grado:'Por Grado', familia:'Por Familia', completo:'Lista Completa', sin_familia:'Lista Alfabética'}[vista] || '';
+
+    if (vista === 'grado') {
+        const grupos = {};
+        alumnosCargados.forEach(a => { const k=a.anio_escolar||'Sin grado'; if(!grupos[k])grupos[k]=[]; grupos[k].push(a); });
+        const cursoOrden = {};
+        cursosCargados.forEach(c => { cursoOrden[c.nombre] = c.orden; });
+        const keys = Object.keys(grupos).sort((a,b)=>(cursoOrden[a]??999)-(cursoOrden[b]??999));
+        cuerpoHtml = keys.map((g,i) => `
+            <div class="grupo${i>0?' nueva-pagina':''}">
+                <div class="grupo-header"><span class="grupo-titulo">🎒 ${escH(g)}</span><span class="grupo-total">${grupos[g].length} alumno(s)</span></div>
+                ${tblImpresion(grupos[g], ['nombre','dni','familia','tutor','estado'])}
+            </div>`).join('');
+    } else if (vista === 'familia') {
+        const grupos = {};
+        alumnosCargados.forEach(a => { const k=a.numero_familia||'?'; if(!grupos[k])grupos[k]={lista:[],tutor:a.nombre_tutor_principal||''}; grupos[k].lista.push(a); });
+        const keys = Object.keys(grupos).sort((a,b)=>Number(a)-Number(b));
+        cuerpoHtml = keys.map((nf,i) => `
+            <div class="grupo${i>0?' nueva-pagina':''}">
+                <div class="grupo-header"><span class="grupo-titulo">Familia N° ${escH(String(nf))}${grupos[nf].tutor?' — '+escH(grupos[nf].tutor):''}</span><span class="grupo-total">${grupos[nf].lista.length} alumno(s)</span></div>
+                ${tblImpresion(grupos[nf].lista, ['nombre','dni','grado','estado'])}
+            </div>`).join('');
+    } else {
+        const lista = [...alumnosCargados].sort((a,b)=>a.nombre_completo.localeCompare(b.nombre_completo));
+        cuerpoHtml = tblImpresion(lista, ['nombre','dni','grado','familia','tutor','estado']);
+    }
+
+    const win = window.open('','_blank','width=1000,height=750');
+    win.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+<title>Alumnos - ${escH(asocNombre)}</title>
+<style>
+@page{size:A4 portrait;margin:10mm 12mm}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Arial,Helvetica,sans-serif;font-size:8.5pt;color:#222;background:#fff}
+.doc-header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #003087;padding-bottom:4mm;margin-bottom:5mm}
+.org-block{display:flex;align-items:center;gap:4mm}
+.org-name{font-size:16pt;font-weight:900;color:#003087}
+.org-sub{font-size:7.5pt;color:#555;margin-top:1mm}
+.doc-meta{text-align:right;font-size:7.5pt;color:#555;line-height:1.6}
+.doc-title{font-size:11pt;font-weight:bold;color:#003087}
+.filtros{font-size:7pt;color:#888;margin-bottom:4mm}
+table{width:100%;border-collapse:collapse;margin-top:2mm}
+thead th{background:#003087;color:#fff;padding:2mm 2.5mm;text-align:left;font-size:7.5pt;font-weight:bold}
+tbody tr:nth-child(even){background:#f0f4ff}
+tbody td{padding:1.8mm 2.5mm;border-bottom:1px solid #e0e8f0;vertical-align:top}
+.grupo{margin-bottom:6mm}
+.grupo-header{display:flex;justify-content:space-between;align-items:center;background:#e8eef8;border-left:4px solid #003087;padding:2mm 3mm;margin-bottom:1mm}
+.grupo-titulo{font-weight:bold;color:#003087;font-size:8.5pt}
+.grupo-total{font-size:7.5pt;color:#555}
+.nueva-pagina{page-break-before:always}
+.doc-footer{margin-top:5mm;padding-top:3mm;border-top:1px solid #ccc;display:flex;justify-content:space-between;font-size:7pt;color:#888}
+@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style></head><body>
+<div class="doc-header">
+    <div class="org-block">${logoHtml}<div><div class="org-name">${escH(asocNombre)}</div>${asocDatos?`<div class="org-sub">${escH(asocDatos)}</div>`:''}</div></div>
+    <div class="doc-meta"><div class="doc-title">LISTADO DE ALUMNOS</div><div>${escH(tituloVista)}</div><div>Fecha: ${fecha}</div><div>Total: ${alumnosCargados.length} alumno(s)</div></div>
+</div>
+<div class="filtros">Estado: ${escH(estado)} · Grado: ${escH(grado)} · Vista: ${escH(tituloVista)}</div>
+${cuerpoHtml}
+<div class="doc-footer"><span>Nexia · MantisTec</span><span>Emitido el ${fecha}</span></div>
+<script>window.addEventListener('load',function(){setTimeout(function(){window.print();},300)});<\/script>
+</body></html>`);
+    win.document.close();
+}
+
+function tblImpresion(lista, cols) {
+    const cabeceras = {nombre:'Apellido y Nombre',dni:'DNI',grado:'Grado',familia:'Familia',tutor:'Tutor/a',estado:'Estado'};
+    return `<table><thead><tr>${cols.map(c=>`<th>${cabeceras[c]||c}</th>`).join('')}</tr></thead>
+    <tbody>${lista.map(a=>`<tr>${cols.map(c=>{
+        if(c==='nombre') return `<td><strong>${escH(a.nombre_completo||'')}</strong></td>`;
+        if(c==='dni')    return `<td>${escH(a.dni||'—')}</td>`;
+        if(c==='grado')  return `<td>${escH(a.anio_escolar||'—')}</td>`;
+        if(c==='familia')return `<td>${escH(String(a.numero_familia||'—'))}</td>`;
+        if(c==='tutor')  return `<td>${escH(a.nombre_tutor_principal||'—')}</td>`;
+        if(c==='estado') return `<td>${escH(a.estado||'')}</td>`;
+        return '<td></td>';
+    }).join('')}</tr>`).join('')}
+    </tbody></table>`;
+}
+
+// -------------------------------------------------------
+// Utils
+// -------------------------------------------------------
+function esc(s) {
+    const d = document.createElement('div');
+    d.appendChild(document.createTextNode(String(s||'')));
+    return d.innerHTML;
+}
+function escH(s) {
+    const d = document.createElement('div');
+    d.appendChild(document.createTextNode(String(s||'')));
+    return d.innerHTML;
+}
+
+init();
+</script>
+</body>
+</html>

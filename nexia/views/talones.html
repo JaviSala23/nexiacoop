@@ -30,6 +30,7 @@
     <nav class="flex-1 p-4 space-y-1">
         <a href="/dashboard"    class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">&#127968; Dashboard</a>
         <a href="/familias"     class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">&#128106; Familias</a>
+        <a href="/alumnos"     class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">&#127890; Alumnos</a>
         <a href="/talones"      class="flex items-center gap-3 px-4 py-2 rounded-lg bg-blue-700 font-medium">&#129534; Talones</a>
         <a href="/pagos"        class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">&#128179; Pagos</a>
         <a href="/conceptos"    class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">&#128194; Conceptos</a>
@@ -150,9 +151,15 @@
 
 <!-- Modal Extra -->
 <div id="modalExtra" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 hidden">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8">
-        <h3 class="text-xl font-bold text-purple-800 mb-6">Nuevo Tal&oacute;n Extra</h3>
-        <div class="space-y-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
+        <h3 class="text-xl font-bold text-purple-800 mb-4">Nuevo Tal&oacute;n Extra</h3>
+        <!-- Tabs -->
+        <div class="flex border-b mb-5">
+            <button id="tabExtraFam" onclick="switchExtraTab('familia')" class="px-4 py-2 text-sm font-medium border-b-2 border-purple-600 text-purple-700">Para una familia</button>
+            <button id="tabExtraTodos" onclick="switchExtraTab('todos')" class="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">Para todas las familias</button>
+        </div>
+        <!-- Tab: familia -->
+        <div id="panelExtraFam" class="space-y-4">
             <div>
                 <label class="text-xs text-gray-500">Familia *</label>
                 <select id="extraFamilia" class="mt-1 w-full border rounded px-3 py-2 text-sm"></select>
@@ -170,10 +177,43 @@
                 <input id="extraObs" type="text" class="mt-1 w-full border rounded px-3 py-2 text-sm">
             </div>
         </div>
+        <!-- Tab: todas -->
+        <div id="panelExtraTodos" class="space-y-4 hidden">
+            <p class="text-sm text-gray-500">Se generará un talón del concepto seleccionado para <b>todas las familias activas</b>.</p>
+            <div>
+                <label class="text-xs text-gray-500">Concepto *</label>
+                <select id="extraConceptoTodos" class="mt-1 w-full border rounded px-3 py-2 text-sm"></select>
+            </div>
+            <div>
+                <label class="text-xs text-gray-500">Monto base *</label>
+                <input id="extraMontoTodos" type="number" min="0" class="mt-1 w-full border rounded px-3 py-2 text-sm">
+            </div>
+            <div>
+                <label class="text-xs text-gray-500">Observaciones</label>
+                <input id="extraObsTodos" type="text" class="mt-1 w-full border rounded px-3 py-2 text-sm">
+            </div>
+        </div>
         <div id="extraError" class="text-red-600 text-sm mt-3 hidden"></div>
         <div class="flex justify-end gap-3 mt-6">
             <button onclick="document.getElementById('modalExtra').classList.add('hidden')" class="px-5 py-2 border rounded-lg text-gray-600">Cancelar</button>
-            <button onclick="generarExtra()" class="px-5 py-2 bg-purple-600 text-white rounded-lg font-medium">Crear tal&oacute;n</button>
+            <button id="btnCrearExtra" onclick="generarExtra()" class="px-5 py-2 bg-purple-600 text-white rounded-lg font-medium">Crear tal&oacute;n</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Editar Precio -->
+<div id="modalEditarPrecio" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xs p-7">
+        <h3 class="text-lg font-bold text-blue-900 mb-4">Editar precio del tal&oacute;n</h3>
+        <input type="hidden" id="editarPrecioId">
+        <div>
+            <label class="text-xs text-gray-500">Nuevo monto *</label>
+            <input id="editarPrecioMonto" type="number" min="0.01" step="0.01" class="mt-1 w-full border rounded px-3 py-2 text-sm">
+        </div>
+        <div id="editarPrecioError" class="text-red-600 text-sm mt-3 hidden"></div>
+        <div class="flex justify-end gap-3 mt-5">
+            <button onclick="document.getElementById('modalEditarPrecio').classList.add('hidden')" class="px-4 py-2 border rounded-lg text-gray-600 text-sm">Cancelar</button>
+            <button onclick="guardarPrecio()" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium">Guardar</button>
         </div>
     </div>
 </div>
@@ -246,6 +286,7 @@ function renderTabla(){
         const periodo=t.mes?(mesesCortos[t.mes]+' '+t.anio):(t.anio||'');
         const monto=Number(t.monto).toLocaleString('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0});
         const btnAnular=t.estado==='GENERADO'?`<button onclick="anularTalon(${t.id_talon})" class="text-red-400 hover:text-red-600 text-xs">Anular</button>`:'';
+        const btnPrecio=t.estado==='GENERADO'?`<button onclick="abrirEditarPrecio(${t.id_talon},${t.monto})" class="text-indigo-500 hover:text-indigo-700 text-xs">Precio</button>`:'';
         tbody.innerHTML+=`<tr class="hover:bg-gray-50" id="row-${t.id_talon}">
             <td class="px-3 py-2"><input type="checkbox" class="sel-talon" value="${t.id_talon}" ${t.estado==='ANULADO'?'disabled':''}></td>
             <td class="px-4 py-2 font-bold">${t.numero_familia}</td>
@@ -257,6 +298,7 @@ function renderTabla(){
             <td class="px-4 py-2"><span class="px-2 py-0.5 rounded-full text-xs ${ec}">${t.estado}</span></td>
             <td class="px-4 py-2 flex gap-2">
                 <button onclick="imprimirUno(${t.id_talon})" class="text-blue-600 hover:underline text-xs">Imprimir</button>
+                ${btnPrecio}
                 ${btnAnular}
             </td>
         </tr>`;
@@ -288,31 +330,103 @@ async function generarTalones(){
 }
 
 // ---------- Extra ----------
+let _extraTab = 'familia';
+function switchExtraTab(tab){
+    _extraTab = tab;
+    document.getElementById('panelExtraFam').classList.toggle('hidden', tab!=='familia');
+    document.getElementById('panelExtraTodos').classList.toggle('hidden', tab!=='todos');
+    document.getElementById('tabExtraFam').className = tab==='familia'
+        ? 'px-4 py-2 text-sm font-medium border-b-2 border-purple-600 text-purple-700'
+        : 'px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700';
+    document.getElementById('tabExtraTodos').className = tab==='todos'
+        ? 'px-4 py-2 text-sm font-medium border-b-2 border-purple-600 text-purple-700'
+        : 'px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700';
+    document.getElementById('btnCrearExtra').textContent = tab==='todos' ? 'Generar para todas' : 'Crear talón';
+}
 async function abrirModalExtra(){
     const familias=await fetch('/api/familias?estado=ACTIVA').then(r=>r.json());
     const sel=document.getElementById('extraFamilia');
     sel.innerHTML='';
     (familias||[]).forEach(f=>{sel.innerHTML+=`<option value="${f.id_familia}">${f.numero_familia} - ${f.nombre_tutor_principal||''}</option>`;});
+    // Poblar conceptos del tab "todos" también
+    const selT=document.getElementById('extraConceptoTodos');
+    selT.innerHTML='';
+    (conceptosCache||[]).filter(c=>c.activo&&c.tipo!=='MENSUAL').forEach(c=>{
+        selT.innerHTML+=`<option value="${c.id_concepto}">${c.nombre}</option>`;
+    });
     document.getElementById('extraError').classList.add('hidden');
     document.getElementById('extraMonto').value='';
     document.getElementById('extraObs').value='';
+    document.getElementById('extraMontoTodos').value='';
+    document.getElementById('extraObsTodos').value='';
+    switchExtraTab('familia');
     document.getElementById('modalExtra').classList.remove('hidden');
 }
 async function generarExtra(){
-    const payload={
-        id_familia:parseInt(document.getElementById('extraFamilia').value),
-        id_concepto:parseInt(document.getElementById('extraConcepto').value),
-        monto:parseFloat(document.getElementById('extraMonto').value),
-        observaciones:document.getElementById('extraObs').value
-    };
-    if(!payload.id_concepto || isNaN(payload.id_concepto)){document.getElementById('extraError').textContent='Seleccioná un concepto';document.getElementById('extraError').classList.remove('hidden');return;}
-    if(!payload.monto || isNaN(payload.monto)){document.getElementById('extraError').textContent='El monto es requerido';document.getElementById('extraError').classList.remove('hidden');return;}
-    const res=await fetch('/api/talones/generar-extra',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    document.getElementById('extraError').classList.add('hidden');
+    const btn=document.getElementById('btnCrearExtra');
+    btn.disabled=true;
+    try {
+        if(_extraTab==='todos'){
+            const idConcepto=parseInt(document.getElementById('extraConceptoTodos').value);
+            const monto=parseFloat(document.getElementById('extraMontoTodos').value);
+            const obs=document.getElementById('extraObsTodos').value;
+            if(!idConcepto||isNaN(idConcepto)){showExtraError('Seleccioná un concepto');return;}
+            if(!monto||isNaN(monto)){showExtraError('El monto es requerido');return;}
+            btn.textContent='Generando...';
+            const res=await fetch('/api/talones/generar-extra-todos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id_concepto:idConcepto,monto,observaciones:obs})});
+            const data=await res.json();
+            if(!res.ok){showExtraError(data.error||'Error');return;}
+            document.getElementById('modalExtra').classList.add('hidden');
+            document.getElementById('soloExtras').checked=true;
+            cargarTalones();
+        } else {
+            const payload={
+                id_familia:parseInt(document.getElementById('extraFamilia').value),
+                id_concepto:parseInt(document.getElementById('extraConcepto').value),
+                monto:parseFloat(document.getElementById('extraMonto').value),
+                observaciones:document.getElementById('extraObs').value
+            };
+            if(!payload.id_concepto||isNaN(payload.id_concepto)){showExtraError('Seleccioná un concepto');return;}
+            if(!payload.monto||isNaN(payload.monto)){showExtraError('El monto es requerido');return;}
+            const res=await fetch('/api/talones/generar-extra',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+            const data=await res.json();
+            if(!res.ok){showExtraError(data.error||'Error');return;}
+            document.getElementById('modalExtra').classList.add('hidden');
+            document.getElementById('soloExtras').checked=true;
+            cargarTalones();
+        }
+    } finally {
+        btn.disabled=false;
+        btn.textContent=_extraTab==='todos'?'Generar para todas':'Crear talón';
+    }
+}
+function showExtraError(msg){
+    const el=document.getElementById('extraError');
+    el.textContent=msg; el.classList.remove('hidden');
+}
+
+// ---------- Editar precio ----------
+function abrirEditarPrecio(id, montoActual){
+    document.getElementById('editarPrecioId').value=id;
+    document.getElementById('editarPrecioMonto').value=montoActual;
+    document.getElementById('editarPrecioError').classList.add('hidden');
+    document.getElementById('modalEditarPrecio').classList.remove('hidden');
+}
+async function guardarPrecio(){
+    const id=parseInt(document.getElementById('editarPrecioId').value);
+    const monto=parseFloat(document.getElementById('editarPrecioMonto').value);
+    if(!monto||isNaN(monto)||monto<=0){
+        const el=document.getElementById('editarPrecioError');
+        el.textContent='El monto debe ser mayor a cero'; el.classList.remove('hidden'); return;
+    }
+    const res=await fetch('/api/talones/'+id+'/monto',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({monto})});
     const data=await res.json();
-    if(!res.ok){document.getElementById('extraError').textContent=data.error||'Error';document.getElementById('extraError').classList.remove('hidden');return;}
-    document.getElementById('modalExtra').classList.add('hidden');
-    // Activar "Solo extras" para que el talón recién creado sea visible
-    document.getElementById('soloExtras').checked=true;
+    if(!res.ok){
+        const el=document.getElementById('editarPrecioError');
+        el.textContent=data.error||'Error'; el.classList.remove('hidden'); return;
+    }
+    document.getElementById('modalEditarPrecio').classList.add('hidden');
     cargarTalones();
 }
 
@@ -335,13 +449,30 @@ async function obtenerAlumnosPorFamilias(lista){
     return mapa;
 }
 
-function ticketHTML(t, alumnosMapa){
+async function obtenerTutoresPorFamilias(lista){
+    const ids=[...new Set(lista.map(t=>t.id_familia))];
+    const mapa={};
+    await Promise.all(ids.map(id=>
+        fetch('/api/familias/'+id+'/tutores').then(r=>r.json()).then(a=>{mapa[id]=a||[];})
+    ));
+    return mapa;
+}
+
+function ticketHTML(t, alumnosMapa, tutoresMapa){
     const monedaFmt = v => Number(v).toLocaleString('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0});
     const periodo = t.mes ? (meses[t.mes] + ' ' + t.anio) : (t.anio ? 'Año '+t.anio : '');
     const alumnos = (alumnosMapa[t.id_familia]||[]).filter(a=>a.estado!=='EGRESADO');
     const alumnosHTML = alumnos.length
         ? alumnos.map(a=>`<div style="font-size:10px;color:#333;">· ${a.nombre_completo}${a.anio_escolar?' — '+a.anio_escolar:''}</div>`).join('')
         : '<div style="font-size:10px;color:#888;">Sin alumnos registrados</div>';
+    const tutores = (tutoresMapa && tutoresMapa[t.id_familia]) || [];
+    const tutoresHTML = tutores.length > 0
+        ? tutores.map(tu=>{
+            const principal = tu.es_principal ? ' <span style="font-size:9px;color:#1e3a5f;">(principal)</span>' : '';
+            const tel = tu.telefono ? ` · ${tu.telefono}` : '';
+            return `<div style="font-size:10px;color:#333;">${tu.nombre_completo}${tel}${principal}</div>`;
+          }).join('')
+        : `<div style="font-size:10px;color:#333;">${t.nombre_tutor_principal||'-'}</div>`;
 
     return `<div style="border:2px solid #1e3a5f;border-radius:8px;padding:10px 14px;font-family:Arial,sans-serif;width:100%;box-sizing:border-box;">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
@@ -353,9 +484,9 @@ function ticketHTML(t, alumnosMapa){
         </div>
         <hr style="margin:5px 0;border-color:#b0c4de;">
         <div style="font-size:10px;margin-bottom:4px;">
-            <div><b>Tutor:</b> ${t.nombre_tutor_principal||'-'}</div>
-            ${t.telefono_familia?`<div><b>Tel:</b> ${t.telefono_familia}</div>`:''}
-            ${t.direccion_familia?`<div><b>Dir:</b> ${t.direccion_familia}</div>`:''}
+            <div style="font-size:9px;font-weight:bold;color:#1e3a5f;margin-bottom:2px;">TUTORES</div>
+            ${tutoresHTML}
+            ${t.direccion_familia?`<div style="font-size:10px;color:#333;"><b>Dir:</b> ${t.direccion_familia}</div>`:''}
         </div>
         <hr style="margin:5px 0;border-color:#b0c4de;">
         <div style="margin-bottom:5px;">
@@ -377,14 +508,14 @@ function ticketHTML(t, alumnosMapa){
     </div>`;
 }
 
-function buildTicketsHTML(lista, alumnosMapa){
+function buildTicketsHTML(lista, alumnosMapa, tutoresMapa){
     const pares = lista.map(t=>`
         <div style="display:grid;grid-template-columns:1fr 28px 1fr;gap:0;align-items:stretch;margin-bottom:18px;page-break-inside:avoid;">
-            <div>${ticketHTML(t, alumnosMapa)}</div>
+            <div>${ticketHTML(t, alumnosMapa, tutoresMapa)}</div>
             <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;color:#999;font-size:11px;user-select:none;">
                 <span style="writing-mode:vertical-rl;letter-spacing:3px;">✂ - - - - - - - - - - - - - -</span>
             </div>
-            <div>${ticketHTML(t, alumnosMapa)}</div>
+            <div>${ticketHTML(t, alumnosMapa, tutoresMapa)}</div>
         </div>`).join('');
 
     return `<!DOCTYPE html><html><head><meta charset="UTF-8">
@@ -416,9 +547,12 @@ function buildTicketsHTML(lista, alumnosMapa){
 
 async function abrirVentanaImpresion(lista){
     if(!lista.length){alert('No hay talones para imprimir.');return;}
-    const alumnosMapa = await obtenerAlumnosPorFamilias(lista);
+    const [alumnosMapa, tutoresMapa] = await Promise.all([
+        obtenerAlumnosPorFamilias(lista),
+        obtenerTutoresPorFamilias(lista)
+    ]);
     const win=window.open('','_blank','width=960,height=750');
-    win.document.write(buildTicketsHTML(lista, alumnosMapa));
+    win.document.write(buildTicketsHTML(lista, alumnosMapa, tutoresMapa));
     win.document.close();
 }
 

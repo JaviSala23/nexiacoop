@@ -17,11 +17,18 @@ public:
     ADD_METHOD_TO(FamiliaController::crearTutor,      "/api/familias/{id}/tutores",        Post,   "AuthFilter");
     ADD_METHOD_TO(FamiliaController::actualizarTutor, "/api/familias/{id}/tutores/{tid}",  Put,    "AuthFilter");
     ADD_METHOD_TO(FamiliaController::eliminarTutor,   "/api/familias/{id}/tutores/{tid}",  Delete, "AuthFilter");
-    // Alumnos
-    ADD_METHOD_TO(FamiliaController::listarAlumnos,   "/api/familias/{id}/alumnos",        Get,    "AuthFilter");
-    ADD_METHOD_TO(FamiliaController::crearAlumno,     "/api/familias/{id}/alumnos",        Post,   "AuthFilter");
-    ADD_METHOD_TO(FamiliaController::actualizarAlumno,"/api/familias/{id}/alumnos/{aid}",  Put,    "AuthFilter");
-    ADD_METHOD_TO(FamiliaController::eliminarAlumno,  "/api/familias/{id}/alumnos/{aid}",  Delete, "AuthFilter");
+    // Alumnos (por familia)
+    ADD_METHOD_TO(FamiliaController::listarAlumnos,       "/api/familias/{id}/alumnos",        Get,    "AuthFilter");
+    ADD_METHOD_TO(FamiliaController::crearAlumno,         "/api/familias/{id}/alumnos",        Post,   "AuthFilter");
+    ADD_METHOD_TO(FamiliaController::actualizarAlumno,    "/api/familias/{id}/alumnos/{aid}",  Put,    "AuthFilter");
+    ADD_METHOD_TO(FamiliaController::eliminarAlumno,      "/api/familias/{id}/alumnos/{aid}",  Delete, "AuthFilter");
+    // Alumnos (globales)
+    ADD_METHOD_TO(FamiliaController::paginaAlumnos,       "/alumnos",                          Get,    "AuthFilter");
+    ADD_METHOD_TO(FamiliaController::listarTodosAlumnos,  "/api/alumnos",                      Get,    "AuthFilter");
+    ADD_METHOD_TO(FamiliaController::statsAlumnos,        "/api/alumnos/stats",                Get,    "AuthFilter");
+    ADD_METHOD_TO(FamiliaController::promoverGrados,      "/api/alumnos/promover",             Post,   "AuthFilter");
+    ADD_METHOD_TO(FamiliaController::estadoUltimaPromocion,"/api/alumnos/ultima-promocion",     Get,    "AuthFilter");
+    ADD_METHOD_TO(FamiliaController::revertirPromocion,   "/api/alumnos/revertir-promocion",   Post,   "AuthFilter");
     METHOD_LIST_END
 
     void pagina(const drogon::HttpRequestPtr&,
@@ -54,4 +61,17 @@ public:
                           std::function<void(const drogon::HttpResponsePtr&)>&&, int id, int aid);
     void eliminarAlumno(const drogon::HttpRequestPtr&,
                         std::function<void(const drogon::HttpResponsePtr&)>&&, int id, int aid);
+
+    void paginaAlumnos(const drogon::HttpRequestPtr&,
+                       std::function<void(const drogon::HttpResponsePtr&)>&&);
+    void listarTodosAlumnos(const drogon::HttpRequestPtr&,
+                            std::function<void(const drogon::HttpResponsePtr&)>&&);
+    void statsAlumnos(const drogon::HttpRequestPtr&,
+                      std::function<void(const drogon::HttpResponsePtr&)>&&);
+    void promoverGrados(const drogon::HttpRequestPtr&,
+                        std::function<void(const drogon::HttpResponsePtr&)>&&);
+    void estadoUltimaPromocion(const drogon::HttpRequestPtr&,
+                               std::function<void(const drogon::HttpResponsePtr&)>&&);
+    void revertirPromocion(const drogon::HttpRequestPtr&,
+                           std::function<void(const drogon::HttpResponsePtr&)>&&);
 };
