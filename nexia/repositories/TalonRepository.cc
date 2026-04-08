@@ -46,7 +46,7 @@ void TalonRepository::listar(int mes, int anio, int idConcepto, bool soloExtras,
         "LEFT JOIN tutores tp ON tp.id_familia=f.id_familia AND tp.es_principal=1 "
         "WHERE 1=1 ";
     if (soloExtras) {
-        sql += "AND t.mes=0 AND t.anio=0 ";
+        sql += "AND (t.mes IS NULL OR t.mes=0) AND (t.anio IS NULL OR t.anio=0) ";
     } else {
         if (mes > 0)       sql += "AND t.mes="  + std::to_string(mes)  + " ";
         if (anio > 0)      sql += "AND t.anio=" + std::to_string(anio) + " ";
