@@ -6,6 +6,7 @@ class ConceptoController : public drogon::HttpController<ConceptoController>
 {
 public:
     METHOD_LIST_BEGIN
+    ADD_METHOD_TO(ConceptoController::pagina,            "/conceptos",                  Get,    "AuthFilter");
     ADD_METHOD_TO(ConceptoController::listar,            "/api/conceptos",              Get,    "AuthFilter");
     ADD_METHOD_TO(ConceptoController::crear,             "/api/conceptos",              Post,   "AuthFilter");
     ADD_METHOD_TO(ConceptoController::actualizar,        "/api/conceptos/{id}",         Put,    "AuthFilter");
@@ -15,6 +16,8 @@ public:
     ADD_METHOD_TO(ConceptoController::eliminarCuota,     "/api/cuotas-config/{id}",     Delete, "AuthFilter");
     METHOD_LIST_END
 
+    void pagina(const drogon::HttpRequestPtr&,
+                std::function<void(const drogon::HttpResponsePtr&)>&&);
     void listar(const drogon::HttpRequestPtr&,
                 std::function<void(const drogon::HttpResponsePtr&)>&&);
     void crear(const drogon::HttpRequestPtr&,

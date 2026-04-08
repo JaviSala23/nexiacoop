@@ -8,514 +8,167 @@
 </head>
 <body class="bg-gray-100 min-h-screen flex">
 <aside class="w-64 bg-blue-900 text-white flex flex-col min-h-screen fixed">
-    <div class="p-6 border-b border-blue-700"><h1 class="text-2xl font-bold">NEXIA</h1><p class="text-blue-300 text-xs">Gestión de Socios</p></div>
+    <div class="p-6 border-b border-blue-700">
+        <h1 class="text-2xl font-bold">NEXIA</h1>
+        <p class="text-blue-300 text-xs mt-1">Cooperadora Escolar</p>
+    </div>
     <nav class="flex-1 p-4 space-y-1">
-        <a href="/dashboard"  class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">🏠 Dashboard</a>
-        <a href="/socios"     class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">👥 Socios</a>
-        <a href="/cobradoras" class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">👩‍💼 Cobradoras</a>
-        <a href="/talones"    class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">🧾 Talones</a>
-        <a href="/pagos"      class="flex items-center gap-3 px-4 py-2 rounded-lg bg-blue-700 font-medium">💳 Pagos</a>
-        <a href="/padron"     class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">📋 Padrón</a>
-        <a href="/inventario" class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">🩼 Inventario</a>
-        <a href="/admin"      class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">⚙️ Admin</a>
+        <a href="/dashboard"    class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">&#127968; Dashboard</a>
+        <a href="/familias"     class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">&#128106; Familias</a>
+        <a href="/talones"      class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">&#129534; Talones</a>
+        <a href="/pagos"        class="flex items-center gap-3 px-4 py-2 rounded-lg bg-blue-700 font-medium">&#128179; Pagos</a>
+        <a href="/conceptos"    class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">&#128194; Conceptos</a>
+        <a href="/contabilidad" class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">&#128202; Contabilidad</a>
+        <a href="/admin"        class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">&#9881; Admin</a>
     </nav>
-    <div class="p-4 border-t border-blue-700"><button onclick="logout()" class="text-sm text-red-300 hover:text-red-200">Cerrar sesión</button></div>
+    <div class="p-4 border-t border-blue-700">
+        <span id="userInfo" class="text-blue-300 text-sm"></span>
+        <button onclick="logout()" class="mt-2 w-full text-left text-sm text-red-300 hover:text-red-200">Cerrar sesion</button>
+    </div>
 </aside>
 <main class="ml-64 flex-1 p-8">
     <h2 class="text-2xl font-bold text-blue-900 mb-6">Pagos</h2>
-    <!-- Tabs -->
-    <div class="flex gap-4 mb-6 border-b border-gray-200">
-        <button onclick="mostrarTab('registrar')" id="tab-registrar" class="pb-3 px-1 text-blue-700 border-b-2 border-blue-700 font-medium text-sm">Registrar pago</button>
-        <button onclick="mostrarTab('cobro-rapido')" id="tab-cobro-rapido" class="pb-3 px-1 text-gray-500 hover:text-gray-700 text-sm">✅ Cobro rápido</button>
-        <button onclick="mostrarTab('listado')"   id="tab-listado"   class="pb-3 px-1 text-gray-500 hover:text-gray-700 text-sm">📋 Listado de pagos</button>
-        <button onclick="mostrarTab('contabilidad')" id="tab-contabilidad" class="pb-3 px-1 text-gray-500 hover:text-gray-700 text-sm">📊 Contabilidad</button>
-        <button onclick="mostrarTab('morosos')"   id="tab-morosos"   class="pb-3 px-1 text-gray-500 hover:text-gray-700 text-sm">Morosos</button>
-    </div>
-    <!-- Tab: Cobro rápido -->
-    <div id="tab-cobro-rapido-content" class="hidden">
-        <!-- Filtros -->
-        <div class="bg-white rounded-xl shadow p-4 mb-4 flex flex-wrap gap-3 items-end">
+
+    <!-- Registrar pago -->
+    <div class="bg-white rounded-xl shadow p-6 mb-6">
+        <h3 class="font-semibold text-gray-700 mb-4">Registrar cobro por codigo de barra</h3>
+        <div class="flex flex-wrap gap-4 items-end">
+            <div class="flex-1 min-w-48">
+                <label class="text-xs text-gray-500">Codigo de barra</label>
+                <input id="codigoBarra" type="text" class="mt-1 w-full border rounded px-3 py-2 font-mono" placeholder="Scan o ingresar manualmente" autofocus>
+            </div>
             <div>
-                <label class="text-xs text-gray-500 block mb-1">Cobradora</label>
-                <select id="crCobradora" class="border rounded px-3 py-2 text-sm" onchange="cargarCobroRapido()">
-                    <option value="">Todas</option>
+                <label class="text-xs text-gray-500">Medio de pago</label>
+                <select id="medioPago" class="mt-1 border rounded px-3 py-2 text-sm">
+                    <option value="EFECTIVO">Efectivo</option>
+                    <option value="TRANSFERENCIA">Transferencia</option>
+                    <option value="MERCADOPAGO">Mercado Pago</option>
+                    <option value="OTRO">Otro</option>
                 </select>
             </div>
-            <div>
-                <label class="text-xs text-gray-500 block mb-1">Mes</label>
-                <select id="crMes" class="border rounded px-3 py-2 text-sm" onchange="cargarCobroRapido()">
-                    <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
-                    <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
-                    <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
-                    <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
-                </select>
+            <div class="flex-1 min-w-40">
+                <label class="text-xs text-gray-500">Observaciones</label>
+                <input id="obsInput" type="text" class="mt-1 w-full border rounded px-3 py-2 text-sm">
             </div>
-            <div>
-                <label class="text-xs text-gray-500 block mb-1">Año</label>
-                <input id="crAnio" type="number" class="border rounded px-3 py-2 text-sm w-24" onchange="cargarCobroRapido()">
-            </div>
-            <button onclick="cargarCobroRapido()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700">Buscar</button>
+            <button onclick="registrarPago()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium">Registrar</button>
         </div>
-        <!-- Barra de acciones -->
-        <div class="bg-white rounded-xl shadow p-3 mb-3 flex items-center justify-between gap-4">
-            <div class="flex items-center gap-3">
-                <label class="flex items-center gap-2 text-sm cursor-pointer">
-                    <input type="checkbox" id="crSelTodos" onchange="seleccionarTodos(this.checked)" class="w-4 h-4">
-                    <span>Seleccionar todos</span>
-                </label>
-                <span id="crContador" class="text-xs text-gray-500"></span>
-            </div>
-            <div class="flex items-center gap-3">
-                <span id="crTotal" class="text-sm font-semibold text-blue-700"></span>
-                <button onclick="registrarCobrosMarcados()" class="bg-green-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-40" id="btnRegistrarCobros" disabled>
-                    ✓ Registrar cobros marcados
-                </button>
-            </div>
-        </div>
-        <!-- Mensaje resultado -->
-        <div id="crMsg" class="hidden mb-3 p-3 rounded-lg text-sm"></div>
-        <!-- Tabla -->
-        <div class="bg-white rounded-xl shadow overflow-hidden">
-            <table class="w-full text-sm">
-                <thead class="bg-blue-50 text-blue-800 font-semibold">
-                    <tr>
-                        <th class="px-3 py-3 w-10"></th>
-                        <th class="px-4 py-3 text-left">#</th>
-                        <th class="px-4 py-3 text-left">Socio</th>
-                        <th class="px-4 py-3 text-left">DNI</th>
-                        <th class="px-4 py-3 text-left">Dirección</th>
-                        <th class="px-4 py-3 text-left">Cobradora</th>
-                        <th class="px-4 py-3 text-right">Importe</th>
-                        <th class="px-4 py-3 text-center">Estado</th>
-                    </tr>
-                </thead>
-                <tbody id="tablaCobroRapido" class="divide-y divide-gray-100"></tbody>
-            </table>
-        </div>
+        <div id="pagoMsg" class="mt-3 text-sm hidden"></div>
     </div>
-    <!-- Tab: Registrar pago -->
-    <div id="tab-registrar-content">
-        <div class="bg-white rounded-xl shadow p-6 max-w-xl">
-            <h3 class="font-semibold text-blue-800 mb-4">Registrar pago por código de barra</h3>
-            <div class="space-y-4">
-                <div>
-                    <label class="text-sm text-gray-600">Código de barra</label>
-                    <input id="pCodigo" class="w-full border rounded px-3 py-2 mt-1 font-mono" placeholder="Escanear o ingresar código" autofocus
-                           onkeydown="if(event.key==='Enter') registrarPago()">
-                </div>
-                <button onclick="registrarPago()" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 font-medium">Registrar pago</button>
-            </div>
-            <div id="pagoMsg" class="hidden mt-4 p-3 rounded-lg text-sm"></div>
-            <!-- Último pago registrado -->
-            <div id="ultimoPago" class="hidden mt-4 bg-green-50 border border-green-200 rounded-xl p-4">
-                <p class="font-medium text-green-700 mb-2">✓ Pago registrado</p>
-                <div id="ultimoPagoDetalle" class="text-sm text-gray-700 space-y-1"></div>
-            </div>
+
+    <!-- Filtros y lista -->
+    <div class="bg-white rounded-xl shadow p-4 mb-4 flex flex-wrap gap-4 items-end">
+        <div>
+            <label class="text-xs text-gray-500">Mes</label>
+            <select id="filtroMes" class="mt-1 border rounded px-3 py-2 text-sm">
+                <option value="">Todos</option>
+                <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
+                <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
+                <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
+                <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+            </select>
         </div>
+        <div>
+            <label class="text-xs text-gray-500">Anio</label>
+            <input id="filtroAnio" type="number" class="mt-1 border rounded px-3 py-2 text-sm w-24">
+        </div>
+        <button onclick="cargarPagos()" class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded text-sm">Filtrar</button>
+        <button onclick="cargarResumenMedio()" class="bg-blue-100 hover:bg-blue-200 text-blue-800 px-4 py-2 rounded text-sm">Ver resumen por medio</button>
     </div>
-    <!-- Tab: Listado de pagos -->
-    <div id="tab-listado-content" class="hidden">
-        <div class="bg-white rounded-xl shadow p-4 mb-4 flex flex-wrap gap-3 items-end">
-            <div>
-                <label class="text-xs text-gray-500 block mb-1">Mes</label>
-                <select id="listMes" class="border rounded px-3 py-2 text-sm">
-                    <option value="">Todos</option>
-                    <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
-                    <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
-                    <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
-                    <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
-                </select>
-            </div>
-            <div>
-                <label class="text-xs text-gray-500 block mb-1">Año</label>
-                <input id="listAnio" type="number" class="border rounded px-3 py-2 text-sm w-24">
-            </div>
-            <button onclick="cargarListado()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700">Buscar</button>
-            <span id="listTotal" class="ml-auto text-sm font-semibold text-blue-700"></span>
-        </div>
-        <div class="bg-white rounded-xl shadow overflow-hidden">
-            <table class="w-full text-sm">
-                <thead class="bg-blue-50 text-blue-800 font-semibold">
-                    <tr>
-                        <th class="px-4 py-3 text-left">Fecha</th>
-                        <th class="px-4 py-3 text-left">#</th>
-                        <th class="px-4 py-3 text-left">Socio</th>
-                        <th class="px-4 py-3 text-left">Periodo</th>
-                        <th class="px-4 py-3 text-left">Cobradora</th>
-                        <th class="px-4 py-3 text-right">Monto</th>
-                    </tr>
-                </thead>
-                <tbody id="tablaPagos" class="divide-y divide-gray-100"></tbody>
-            </table>
-        </div>
-    </div>
-    <!-- Tab: Contabilidad -->
-    <div id="tab-contabilidad-content" class="hidden">
-        <div class="bg-white rounded-xl shadow p-4 mb-4 flex flex-wrap gap-3 items-end">
-            <div>
-                <label class="text-xs text-gray-500 block mb-1">Año</label>
-                <input id="contAnio" type="number" class="border rounded px-3 py-2 text-sm w-24">
-            </div>
-            <div>
-                <label class="text-xs text-gray-500 block mb-1">Mes (opcional)</label>
-                <select id="contMes" class="border rounded px-3 py-2 text-sm">
-                    <option value="">Todos</option>
-                    <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
-                    <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
-                    <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
-                    <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
-                </select>
-            </div>
-            <button onclick="cargarContabilidad()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700">Buscar</button>
-        </div>
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <!-- Resumen por mes -->
-            <div class="bg-white rounded-xl shadow overflow-hidden">
-                <div class="bg-blue-50 px-4 py-3 border-b border-blue-100">
-                    <h3 class="font-semibold text-blue-800">📅 Recaudación por mes</h3>
-                </div>
-                <table class="w-full text-sm">
-                    <thead class="bg-gray-50 text-gray-500 text-xs uppercase">
-                        <tr>
-                            <th class="px-4 py-2 text-left">Periodo</th>
-                            <th class="px-4 py-2 text-center">Cobros</th>
-                            <th class="px-4 py-2 text-right">Total recaudado</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tablaResumenMes" class="divide-y divide-gray-100"></tbody>
-                    <tfoot id="tablaResumenMesTot"></tfoot>
-                </table>
-            </div>
-            <!-- Resumen por cobradora -->
-            <div class="bg-white rounded-xl shadow overflow-hidden">
-                <div class="bg-purple-50 px-4 py-3 border-b border-purple-100">
-                    <h3 class="font-semibold text-purple-800">👩‍💼 Recaudación por cobradora</h3>
-                </div>
-                <table class="w-full text-sm">
-                    <thead class="bg-gray-50 text-gray-500 text-xs uppercase">
-                        <tr>
-                            <th class="px-4 py-2 text-left">Cobradora</th>
-                            <th class="px-4 py-2 text-center">Cobros</th>
-                            <th class="px-4 py-2 text-right">Total cobrado</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tablaResumenCobradora" class="divide-y divide-gray-100"></tbody>
-                    <tfoot id="tablaResumenCobTot"></tfoot>
-                </table>
-            </div>
-        </div>
-    </div>
-    <!-- Tab: Morosos -->
-    <div id="tab-morosos-content" class="hidden">
-        <div class="bg-white rounded-xl shadow overflow-hidden">
-            <table class="w-full text-sm">
-                <thead class="bg-red-50 text-red-800 font-semibold">
-                    <tr>
-                        <th class="px-4 py-3 text-left">#Socio</th>
-                        <th class="px-4 py-3 text-left">Nombre</th>
-                        <th class="px-4 py-3 text-left">Cobradora</th>
-                        <th class="px-4 py-3 text-left">Talones pendientes</th>
-                        <th class="px-4 py-3 text-left">Deuda total</th>
-                    </tr>
-                </thead>
-                <tbody id="tablaMorosos" class="divide-y divide-gray-100"></tbody>
-            </table>
-        </div>
+
+    <!-- Resumen medios -->
+    <div id="resumenMedios" class="grid grid-cols-4 gap-4 mb-4 hidden"></div>
+
+    <div class="bg-white rounded-xl shadow overflow-hidden">
+        <table class="w-full text-sm">
+            <thead class="bg-blue-50 text-blue-800">
+                <tr>
+                    <th class="px-4 py-3 text-left">Familia</th>
+                    <th class="px-4 py-3 text-left">Tutor</th>
+                    <th class="px-4 py-3 text-left">Concepto</th>
+                    <th class="px-4 py-3 text-left">Fecha</th>
+                    <th class="px-4 py-3 text-left">Medio</th>
+                    <th class="px-4 py-3 text-right">Monto</th>
+                    <th class="px-4 py-3 text-left">Obs</th>
+                </tr>
+            </thead>
+            <tbody id="tablaPagos" class="divide-y divide-gray-100"></tbody>
+        </table>
+        <p id="sinPagos" class="text-center text-gray-400 py-8 hidden">Sin pagos para el periodo seleccionado</p>
     </div>
 </main>
 <script>
-async function logout() { await fetch('/api/auth/logout',{method:'POST'}); window.location.href='/login'; }
-function mostrarTab(t) {
-    ['registrar','cobro-rapido','listado','contabilidad','morosos'].forEach(tab=>{
-        document.getElementById('tab-'+tab+'-content').classList.toggle('hidden', tab!==t);
-        const btn = document.getElementById('tab-'+tab);
-        btn.className = tab===t
-            ? 'pb-3 px-1 text-blue-700 border-b-2 border-blue-700 font-medium text-sm'
-            : 'pb-3 px-1 text-gray-500 hover:text-gray-700 text-sm';
-    });
-    if (t==='listado')       cargarListado();
-    if (t==='morosos')       cargarMorosos();
-    if (t==='cobro-rapido')  cargarCobroRapido();
-    if (t==='contabilidad')  cargarContabilidad();
+async function logout(){await fetch('/api/auth/logout',{method:'POST'});window.location.href='/login';}
+fetch('/api/auth/me').then(r=>r.json()).then(u=>{
+    if(!u.id){window.location.href='/login';return;}
+    document.getElementById('userInfo').textContent=u.nombre+' ('+u.rol+')';
+    const ahora=new Date();
+    document.getElementById('filtroMes').value=ahora.getMonth()+1;
+    document.getElementById('filtroAnio').value=ahora.getFullYear();
+    cargarPagos();
+    document.getElementById('codigoBarra').addEventListener('keydown', e=>{if(e.key==='Enter')registrarPago();});
+});
+async function registrarPago(){
+    const codigo=document.getElementById('codigoBarra').value.trim();
+    const medio=document.getElementById('medioPago').value;
+    const obs=document.getElementById('obsInput').value.trim();
+    const msgEl=document.getElementById('pagoMsg');
+    if(!codigo){msgEl.textContent='Ingrese el codigo de barra';msgEl.className='mt-3 text-sm text-red-600';msgEl.classList.remove('hidden');return;}
+    const res=await fetch('/api/pagos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({codigo_barra:codigo,medio_pago:medio,observaciones:obs})});
+    const data=await res.json();
+    if(!res.ok){msgEl.textContent=data.error||'Error al registrar';msgEl.className='mt-3 text-sm text-red-600';msgEl.classList.remove('hidden');return;}
+    msgEl.textContent='Pago registrado correctamente';
+    msgEl.className='mt-3 text-sm text-green-700 font-semibold';msgEl.classList.remove('hidden');
+    document.getElementById('codigoBarra').value='';document.getElementById('obsInput').value='';
+    document.getElementById('codigoBarra').focus();
+    cargarPagos();
+    setTimeout(()=>msgEl.classList.add('hidden'),3000);
 }
-async function init() {
-    const r = await fetch('/api/cobradoras'); const cobs = await r.json();
-    const activas = cobs.filter(c=>c.activa);
-    document.getElementById('crCobradora').innerHTML = '<option value="">Todas</option>' + activas.map(c=>`<option value="${c.id_cobradora}">${c.nombre}</option>`).join('');
-    const ahora = new Date();
-    document.getElementById('crMes').value   = ahora.getMonth() + 1;
-    document.getElementById('crAnio').value  = ahora.getFullYear();
-    document.getElementById('listMes').value = ahora.getMonth() + 1;
-    document.getElementById('listAnio').value= ahora.getFullYear();
-    document.getElementById('contAnio').value= ahora.getFullYear();
-}
-async function registrarPago() {
-    const codigo = document.getElementById('pCodigo').value.trim();
-    const msg = document.getElementById('pagoMsg');
-    if (!codigo) { mostrarMsg(msg,'error','Ingrese un código de barra'); return; }
-    const r = await fetch('/api/pagos', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({codigo_barra:codigo}) });
-    const d = await r.json();
-    if (r.ok) {
-        mostrarMsg(msg,'ok','Pago registrado correctamente');
-        document.getElementById('pCodigo').value = '';
-        const up = document.getElementById('ultimoPago');
-        up.classList.remove('hidden');
-        document.getElementById('ultimoPagoDetalle').innerHTML =
-            `<p><strong>Socio:</strong> ${d.nombre_socio||d.socio||'-'}</p>
-             <p><strong>Código:</strong> ${d.codigo||d.codigo_barra||codigo}</p>
-             <p><strong>Monto:</strong> $${(d.monto||0).toLocaleString('es-AR',{minimumFractionDigits:2})}</p>`;
-    } else { mostrarMsg(msg,'error', d.error||'Error al registrar'); }
-}
-function mostrarMsg(el,tipo,txt) {
-    el.className = tipo==='ok' ? 'mt-4 p-3 rounded-lg text-sm bg-green-100 text-green-700' : 'mt-4 p-3 rounded-lg text-sm bg-red-100 text-red-700';
-    el.textContent = txt; el.classList.remove('hidden');
-    setTimeout(()=>el.classList.add('hidden'), 5000);
-}
-// ─── Cobro rápido ──────────────────────────────────────────────
-let talonesCobroRapido = [];
-
-async function cargarCobroRapido() {
-    const mes  = document.getElementById('crMes').value;
-    const anio = document.getElementById('crAnio').value;
-    const cob  = document.getElementById('crCobradora').value;
-    if (!mes || !anio) return;
-    const p = new URLSearchParams({mes, anio});
-    if (cob) p.set('cobradora', cob);
-    const r = await fetch('/api/talones?' + p);
-    const todos = await r.json();
-    // GENERADOS primero, luego PAGADOS; dentro de cada estado, ordenar por cobradora y luego socio
-    talonesCobroRapido = todos.filter(t => t.estado === 'GENERADO' || t.estado === 'PAGADO');
-    talonesCobroRapido.sort((a,b) => {
-        if (a.estado !== b.estado) return a.estado === 'GENERADO' ? -1 : 1;
-        const ca = (a.nombre_cobradora||'').localeCompare(b.nombre_cobradora||'');
-        return ca !== 0 ? ca : (a.nombre_socio||'').localeCompare(b.nombre_socio||'');
-    });
-    document.getElementById('crSelTodos').checked = false;
-    actualizarResumenCR();
-    const tbody = document.getElementById('tablaCobroRapido');
-    if (!talonesCobroRapido.length) {
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center py-8 text-gray-400">Sin talones para este período</td></tr>';
-        return;
-    }
-    // Agrupar por cobradora para encabezados de grupo
-    let cobActual = null;
-    let html = '';
-    talonesCobroRapido.forEach((t, i) => {
-        const pagado = t.estado === 'PAGADO';
-        const nomCob = t.nombre_cobradora || 'Sin cobradora';
-        if (nomCob !== cobActual) {
-            cobActual = nomCob;
-            // Contar pendientes de este grupo para el checkbox de grupo
-            const pendientesGrupo = talonesCobroRapido
-                .map((x, j) => ({x, j}))
-                .filter(({x}) => (x.nombre_cobradora||'Sin cobradora') === nomCob && x.estado === 'GENERADO')
-                .map(({j}) => j);
-            const grupoCobId = 'grp-' + nomCob.replace(/\W/g,'_');
-            html += `<tr class="bg-blue-900 text-white">
-                <td class="px-3 py-2 text-center">
-                    ${pendientesGrupo.length > 0
-                        ? `<input type="checkbox" id="${grupoCobId}" class="cr-grp-check w-4 h-4" title="Seleccionar todos de ${nomCob}"
-                               data-indices="${pendientesGrupo.join(',')}"
-                               onchange="seleccionarGrupo(this)" onclick="event.stopPropagation()">`
-                        : ''}
-                </td>
-                <td colspan="7" class="px-4 py-2 font-semibold text-sm tracking-wide">
-                    👩‍💼 ${nomCob}
-                    ${pendientesGrupo.length > 0 ? `<span class="text-blue-300 font-normal text-xs ml-2">(${pendientesGrupo.length} pendiente(s))</span>` : ''}
-                </td>
-            </tr>`;
-        }
-        html += `<tr class="${pagado ? 'bg-green-50 opacity-60' : 'hover:bg-blue-50 cursor-pointer'}" onclick="${pagado ? '' : 'toggleFila('+i+')'}">
-            <td class="px-3 py-2 text-center">
-                ${pagado
-                    ? '<span class="text-green-600 text-base">✓</span>'
-                    : `<input type="checkbox" class="cr-check w-4 h-4" data-idx="${i}" onchange="actualizarResumenCR()" onclick="event.stopPropagation()">`
-                }
-            </td>
-            <td class="px-4 py-2 text-gray-400 font-mono text-xs">${t.numero_socio||''}</td>
-            <td class="px-4 py-2 font-medium">${t.nombre_socio||''}</td>
-            <td class="px-4 py-2 text-gray-500 text-xs">${t.dni_socio||''}</td>
-            <td class="px-4 py-2 text-gray-500 text-xs">${t.direccion_socio||''}</td>
-            <td class="px-4 py-2">${t.nombre_cobradora||'-'}</td>
-            <td class="px-4 py-2 text-right font-semibold text-blue-700">$${(t.monto||0).toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
-            <td class="px-4 py-2 text-center">
-                <span class="px-2 py-0.5 rounded-full text-xs ${pagado ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}">
-                    ${pagado ? 'Pagado' : 'Pendiente'}
-                </span>
-            </td>
+async function cargarPagos(){
+    const mes=document.getElementById('filtroMes').value;
+    const anio=document.getElementById('filtroAnio').value;
+    const p=new URLSearchParams();
+    if(mes)p.set('mes',mes);if(anio)p.set('anio',anio);
+    const data=await fetch('/api/pagos?'+p).then(r=>r.json());
+    const tbody=document.getElementById('tablaPagos');
+    const sinP=document.getElementById('sinPagos');
+    tbody.innerHTML='';
+    if(!Array.isArray(data)||!data.length){sinP.classList.remove('hidden');return;}
+    sinP.classList.add('hidden');
+    const medioCls={'EFECTIVO':'bg-green-100 text-green-700','TRANSFERENCIA':'bg-blue-100 text-blue-700','MERCADOPAGO':'bg-indigo-100 text-indigo-700','OTRO':'bg-gray-100 text-gray-600'};
+    data.forEach(p=>{
+        const monto=Number(p.monto).toLocaleString('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0});
+        const mc=medioCls[p.medio_pago]||'bg-gray-100 text-gray-600';
+        tbody.innerHTML+=`<tr class="hover:bg-gray-50">
+            <td class="px-4 py-2 font-bold">${p.numero_familia}</td>
+            <td class="px-4 py-2">${p.nombre_tutor_principal||'-'}</td>
+            <td class="px-4 py-2">${p.nombre_concepto||'-'}</td>
+            <td class="px-4 py-2 text-gray-500">${p.fecha_pago}</td>
+            <td class="px-4 py-2"><span class="px-2 py-0.5 rounded-full text-xs ${mc}">${p.medio_pago}</span></td>
+            <td class="px-4 py-2 text-right font-mono font-semibold">${monto}</td>
+            <td class="px-4 py-2 text-gray-400 text-xs">${p.observaciones||''}</td>
         </tr>`;
     });
-    tbody.innerHTML = html;
 }
-
-function seleccionarGrupo(grpCb) {
-    const indices = grpCb.dataset.indices.split(',').map(Number);
-    indices.forEach(idx => {
-        const cb = document.querySelector(`.cr-check[data-idx="${idx}"]`);
-        if (cb) cb.checked = grpCb.checked;
-    });
-    actualizarResumenCR();
-}
-
-function toggleFila(idx) {
-    const cb = document.querySelector(`.cr-check[data-idx="${idx}"]`);
-    if (cb) { cb.checked = !cb.checked; actualizarResumenCR(); }
-}
-
-function seleccionarTodos(val) {
-    document.querySelectorAll('.cr-check').forEach(cb => cb.checked = val);
-    document.querySelectorAll('.cr-grp-check').forEach(cb => cb.checked = val);
-    actualizarResumenCR();
-}
-
-function actualizarResumenCR() {
-    const checks = [...document.querySelectorAll('.cr-check:checked')];
-    const total  = checks.reduce((s, cb) => s + (talonesCobroRapido[+cb.dataset.idx]?.monto || 0), 0);
-    const pendientes = document.querySelectorAll('.cr-check').length;
-    document.getElementById('crContador').textContent = `${checks.length} seleccionado(s) de ${pendientes} pendiente(s)`;
-    document.getElementById('crTotal').textContent    = checks.length ? `Total: $${total.toLocaleString('es-AR',{minimumFractionDigits:2})}` : '';
-    document.getElementById('btnRegistrarCobros').disabled = checks.length === 0;
-    // Sincronizar estado de checkboxes de grupo (indeterminado si hay parcial)
-    document.querySelectorAll('.cr-grp-check').forEach(grpCb => {
-        const indices = grpCb.dataset.indices.split(',').map(Number);
-        const total = indices.length;
-        const marcados = indices.filter(idx => {
-            const cb = document.querySelector(`.cr-check[data-idx="${idx}"]`);
-            return cb && cb.checked;
-        }).length;
-        grpCb.indeterminate = marcados > 0 && marcados < total;
-        grpCb.checked = marcados === total;
+async function cargarResumenMedio(){
+    const mes=document.getElementById('filtroMes').value;
+    const anio=document.getElementById('filtroAnio').value;
+    const p=new URLSearchParams();
+    if(mes)p.set('mes',mes);if(anio)p.set('anio',anio);
+    const data=await fetch('/api/pagos/resumen/medio-pago?'+p).then(r=>r.json());
+    const sec=document.getElementById('resumenMedios');
+    sec.innerHTML='';
+    sec.classList.remove('hidden');
+    const colores={'EFECTIVO':'border-green-500 text-green-700','TRANSFERENCIA':'border-blue-500 text-blue-700','MERCADOPAGO':'border-indigo-500 text-indigo-700','OTRO':'border-gray-400 text-gray-600'};
+    (data||[]).forEach(r=>{
+        const cls=colores[r.medio_pago]||'border-gray-400 text-gray-600';
+        const monto=Number(r.total).toLocaleString('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0});
+        sec.innerHTML+=`<div class="bg-white rounded-xl shadow p-4 border-l-4 ${cls}">
+            <p class="text-xs text-gray-500">${r.medio_pago}</p>
+            <p class="text-xl font-bold mt-1 ${cls.split(' ')[1]}">${monto}</p>
+            <p class="text-xs text-gray-400">${r.cantidad} pagos</p>
+        </div>`;
     });
 }
-
-async function registrarCobrosMarcados() {
-    const checks = [...document.querySelectorAll('.cr-check:checked')];
-    if (!checks.length) return;
-    const btn = document.getElementById('btnRegistrarCobros');
-    btn.disabled = true;
-    btn.textContent = 'Registrando...';
-    let ok = 0, errores = [];
-    for (const cb of checks) {
-        const t = talonesCobroRapido[+cb.dataset.idx];
-        if (!t) continue;
-        const r = await fetch('/api/pagos', {
-            method: 'POST',
-            headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({codigo_barra: t.codigo_barra})
-        });
-        if (r.ok) ok++;
-        else { const d = await r.json(); errores.push(`${t.nombre_socio}: ${d.error||'error'}`); }
-    }
-    const msg = document.getElementById('crMsg');
-    if (errores.length === 0) {
-        msg.className = 'mb-3 p-3 rounded-lg text-sm bg-green-100 text-green-700';
-        msg.textContent = `✓ ${ok} pago(s) registrado(s) correctamente.`;
-    } else {
-        msg.className = 'mb-3 p-3 rounded-lg text-sm bg-yellow-100 text-yellow-700';
-        msg.textContent = `${ok} registrado(s). Errores: ${errores.join(' | ')}`;
-    }
-    msg.classList.remove('hidden');
-    btn.textContent = '✓ Registrar cobros marcados';
-    await cargarCobroRapido(); // refrescar
-    setTimeout(() => msg.classList.add('hidden'), 6000);
-}
-// ─── Contabilidad ───────────────────────────────────────────────
-async function cargarContabilidad() {
-    const anio = document.getElementById('contAnio').value;
-    const mes  = document.getElementById('contMes').value;
-    await Promise.all([cargarResumenMes(anio), cargarResumenCobradora(mes, anio)]);
-}
-
-async function cargarResumenMes(anio) {
-    const p = new URLSearchParams(); if (anio) p.set('anio', anio);
-    const r = await fetch('/api/pagos/resumen/mes?' + p);
-    const data = await r.json();
-    const MESES = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-    const tbody = document.getElementById('tablaResumenMes');
-    const tfoot = document.getElementById('tablaResumenMesTot');
-    if (!Array.isArray(data) || !data.length) {
-        tbody.innerHTML = '<tr><td colspan="3" class="text-center py-8 text-gray-400">Sin datos</td></tr>';
-        tfoot.innerHTML = ''; return;
-    }
-    tbody.innerHTML = data.map(d => `
-        <tr class="hover:bg-gray-50">
-            <td class="px-4 py-2 font-medium">${MESES[d.mes]||d.mes} ${d.anio}</td>
-            <td class="px-4 py-2 text-center text-gray-600">${d.total_pagos}</td>
-            <td class="px-4 py-2 text-right font-semibold text-blue-700">$${(d.total_monto||0).toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
-        </tr>`).join('');
-    const totM = data.reduce((s,d) => s + (d.total_monto||0), 0);
-    const totC = data.reduce((s,d) => s + (d.total_pagos||0), 0);
-    tfoot.innerHTML = `<tr class="bg-blue-50 font-semibold border-t-2 border-blue-200">
-        <td class="px-4 py-2">Total</td>
-        <td class="px-4 py-2 text-center">${totC}</td>
-        <td class="px-4 py-2 text-right text-blue-800">$${totM.toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
-    </tr>`;
-}
-
-async function cargarResumenCobradora(mes, anio) {
-    const p = new URLSearchParams(); if (mes) p.set('mes', mes); if (anio) p.set('anio', anio);
-    const r = await fetch('/api/pagos/resumen/cobradora?' + p);
-    const data = await r.json();
-    const tbody = document.getElementById('tablaResumenCobradora');
-    const tfoot = document.getElementById('tablaResumenCobTot');
-    if (!Array.isArray(data) || !data.length) {
-        tbody.innerHTML = '<tr><td colspan="3" class="text-center py-8 text-gray-400">Sin datos</td></tr>';
-        tfoot.innerHTML = ''; return;
-    }
-    tbody.innerHTML = data.map(d => `
-        <tr class="hover:bg-purple-50">
-            <td class="px-4 py-2 font-medium">${d.nombre_cobradora}</td>
-            <td class="px-4 py-2 text-center text-gray-600">${d.total_pagos}</td>
-            <td class="px-4 py-2 text-right font-semibold text-purple-700">$${(d.total_monto||0).toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
-        </tr>`).join('');
-    const totM = data.reduce((s,d) => s + (d.total_monto||0), 0);
-    const totC = data.reduce((s,d) => s + (d.total_pagos||0), 0);
-    tfoot.innerHTML = `<tr class="bg-purple-50 font-semibold border-t-2 border-purple-200">
-        <td class="px-4 py-2">Total</td>
-        <td class="px-4 py-2 text-center">${totC}</td>
-        <td class="px-4 py-2 text-right text-purple-800">$${totM.toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
-    </tr>`;
-}
-
-// ────────────────────────────────────────────────────────────────
-async function cargarListado() {
-    const mes  = document.getElementById('listMes').value;
-    const anio = document.getElementById('listAnio').value;
-    const p = new URLSearchParams(); if(mes) p.set('mes',mes); if(anio) p.set('anio',anio);
-    const r = await fetch('/api/pagos?'+p);
-    const lista = await r.json();
-    const tbody = document.getElementById('tablaPagos');
-    const MESES = ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-    if (!Array.isArray(lista) || !lista.length) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-gray-400">No hay pagos para este período</td></tr>';
-        document.getElementById('listTotal').textContent = '';
-        return;
-    }
-    tbody.innerHTML = lista.map(p=>`
-        <tr class="hover:bg-gray-50">
-            <td class="px-4 py-3 text-xs text-gray-500">${(p.fecha_pago||'').substring(0,10)}</td>
-            <td class="px-4 py-3 font-mono text-xs text-gray-500">${p.numero_socio||''}</td>
-            <td class="px-4 py-3 font-medium">${p.nombre_socio||'-'}</td>
-            <td class="px-4 py-3 text-xs text-gray-500">${MESES[p.mes]||''} ${p.anio||''}</td>
-            <td class="px-4 py-3">${p.nombre_cobradora||'-'}</td>
-            <td class="px-4 py-3 text-right font-semibold text-blue-700">$${(p.monto||0).toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
-        </tr>`).join('');
-    const tot = lista.reduce((s,p) => s + (p.monto||0), 0);
-    document.getElementById('listTotal').textContent = `Total: $${tot.toLocaleString('es-AR',{minimumFractionDigits:2})} (${lista.length} cobros)`;
-}
-async function cargarMorosos() {
-    const r = await fetch('/api/morosos'); const lista = await r.json();
-    const tbody = document.getElementById('tablaMorosos');
-    tbody.innerHTML = lista.map(m=>`
-        <tr class="hover:bg-red-50">
-            <td class="px-4 py-3 font-mono">${m.numero_socio}</td>
-            <td class="px-4 py-3 font-medium">${m.nombre||'-'}</td>
-            <td class="px-4 py-3">${m.cobradora||'-'}</td>
-            <td class="px-4 py-3 text-center font-semibold text-red-600">${m.meses_adeudados}</td>
-            <td class="px-4 py-3 font-semibold text-red-700">$${(m.deuda_total||0).toFixed(2)}</td>
-        </tr>`).join('') || '<tr><td colspan="5" class="text-center py-8 text-gray-400">Sin morosos 🎉</td></tr>';
-}
-init();
 </script>
 </body>
 </html>

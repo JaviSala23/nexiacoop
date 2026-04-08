@@ -2,6 +2,12 @@
 #include <drogon/drogon.h>
 #include "../repositories/ConceptoRepository.h"
 
+void ConceptoController::pagina(const drogon::HttpRequestPtr&,
+    std::function<void(const drogon::HttpResponsePtr&)>&& callback)
+{
+    callback(drogon::HttpResponse::newFileResponse("views/conceptos.html"));
+}
+
 void ConceptoController::listar(const drogon::HttpRequestPtr&,
     std::function<void(const drogon::HttpResponsePtr&)>&& callback)
 {

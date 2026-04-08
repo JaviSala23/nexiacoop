@@ -18,7 +18,7 @@
             "rdbms": "mysql",
             "host": "127.0.0.1",
             "port": 3306,
-            "dbname": "JubiladoSurgentes",
+            "dbname": "CooperadoraEscolar",
             "user": "root",
             "passwd": "Celeste14",
             "connection_number": 5,

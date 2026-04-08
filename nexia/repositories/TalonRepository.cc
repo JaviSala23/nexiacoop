@@ -18,14 +18,14 @@ static Talon rowToTalon(const Row& row) {
     t.fecha_generacion = row["fecha_generacion"].as<std::string>();
     t.fecha_pago     = row["fecha_pago"].isNull() ? "" : row["fecha_pago"].as<std::string>();
     t.observaciones  = row["observaciones"].isNull() ? "" : row["observaciones"].as<std::string>();
-    t.numero_familia           = row.find("numero_familia") != row.end() ? row["numero_familia"].as<int>() : 0;
-    t.nombre_concepto          = row.find("nombre_concepto") != row.end() ? (row["nombre_concepto"].isNull() ? "" : row["nombre_concepto"].as<std::string>()) : "";
-    t.tipo_concepto            = row.find("tipo_concepto") != row.end() ? (row["tipo_concepto"].isNull() ? "" : row["tipo_concepto"].as<std::string>()) : "";
-    t.nombre_tutor_principal   = row.find("nombre_tutor_principal") != row.end() ? (row["nombre_tutor_principal"].isNull() ? "" : row["nombre_tutor_principal"].as<std::string>()) : "";
-    t.dni_tutor_principal      = row.find("dni_tutor_principal") != row.end() ? (row["dni_tutor_principal"].isNull() ? "" : row["dni_tutor_principal"].as<std::string>()) : "";
-    t.telefono_familia         = row.find("telefono_familia") != row.end() ? (row["telefono_familia"].isNull() ? "" : row["telefono_familia"].as<std::string>()) : "";
-    t.direccion_familia        = row.find("direccion_familia") != row.end() ? (row["direccion_familia"].isNull() ? "" : row["direccion_familia"].as<std::string>()) : "";
-    t.cantidad_alumnos         = row.find("cantidad_alumnos") != row.end() ? row["cantidad_alumnos"].as<int>() : 0;
+    t.numero_familia           = row["numero_familia"].as<int>();
+    t.nombre_concepto          = row["nombre_concepto"].isNull() ? "" : row["nombre_concepto"].as<std::string>();
+    t.tipo_concepto            = row["tipo_concepto"].isNull() ? "" : row["tipo_concepto"].as<std::string>();
+    t.nombre_tutor_principal   = row["nombre_tutor_principal"].isNull() ? "" : row["nombre_tutor_principal"].as<std::string>();
+    t.dni_tutor_principal      = row["dni_tutor_principal"].isNull() ? "" : row["dni_tutor_principal"].as<std::string>();
+    t.telefono_familia         = row["telefono_familia"].isNull() ? "" : row["telefono_familia"].as<std::string>();
+    t.direccion_familia        = row["direccion_familia"].isNull() ? "" : row["direccion_familia"].as<std::string>();
+    t.cantidad_alumnos         = row["cantidad_alumnos"].as<int>();
     return t;
 }
 

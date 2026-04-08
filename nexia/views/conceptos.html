@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexia - Conceptos y Cuotas</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex">
+<!-- Sidebar -->
+<aside class="w-64 bg-blue-900 text-white flex flex-col min-h-screen fixed">
+    <div class="p-6 border-b border-blue-700">
+        <h1 class="text-2xl font-bold">NEXIA</h1>
+        <p class="text-blue-300 text-xs mt-1">Cooperadora Escolar</p>
+    </div>
+    <nav class="flex-1 p-4 space-y-1">
+        <a href="/dashboard"    class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">🏠 Dashboard</a>
+        <a href="/familias"     class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">👨‍👩‍👧 Familias</a>
+        <a href="/talones"      class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">🧾 Talones</a>
+        <a href="/pagos"        class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">💳 Pagos</a>
+        <a href="/conceptos"    class="flex items-center gap-3 px-4 py-2 rounded-lg bg-blue-700 font-medium">📂 Conceptos</a>
+        <a href="/contabilidad" class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">📊 Contabilidad</a>
+        <a href="/admin"        class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">⚙️ Admin</a>
+    </nav>
+    <div class="p-4 border-t border-blue-700">
+        <span id="userInfo" class="text-blue-300 text-sm"></span>
+        <button onclick="logout()" class="mt-2 w-full text-left text-sm text-red-300 hover:text-red-200">Cerrar sesión</button>
+    </div>
+</aside>
+
+<main class="ml-64 flex-1 p-8">
+    <h2 class="text-2xl font-bold text-blue-900 mb-6">Conceptos de Cobro y Cuotas</h2>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+        <!-- Conceptos -->
+        <div>
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold text-gray-700">Conceptos</h3>
+                <button onclick="abrirModalConcepto()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium">+ Nuevo</button>
+            </div>
+            <div class="bg-white rounded-xl shadow overflow-hidden">
+                <table class="w-full text-sm">
+                    <thead class="bg-blue-50 text-blue-800">
+                        <tr>
+                            <th class="px-4 py-3 text-left">Nombre</th>
+                            <th class="px-4 py-3 text-left">Tipo</th>
+                            <th class="px-4 py-3 text-left">Estado</th>
+                            <th class="px-4 py-3 text-left">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaConceptos" class="divide-y divide-gray-100"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Cuotas config -->
+        <div>
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold text-gray-700">Monto por cantidad de alumnos</h3>
+                <button onclick="abrirModalCuota()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium">+ Agregar</button>
+            </div>
+            <div class="bg-white rounded-xl shadow overflow-hidden">
+                <table class="w-full text-sm">
+                    <thead class="bg-green-50 text-green-800">
+                        <tr>
+                            <th class="px-4 py-3 text-left">Cantidad alumnos</th>
+                            <th class="px-4 py-3 text-left">Monto mensual</th>
+                            <th class="px-4 py-3 text-left">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaCuotas" class="divide-y divide-gray-100"></tbody>
+                </table>
+            </div>
+            <p class="text-xs text-gray-400 mt-2">Si una familia tiene más alumnos que el máximo configurado, se aplica el monto mayor disponible.</p>
+        </div>
+    </div>
+</main>
+
+<!-- Modal Concepto -->
+<div id="modalConcepto" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
+        <h3 id="modalConceptoTitulo" class="text-xl font-bold text-blue-900 mb-6">Nuevo Concepto</h3>
+        <input type="hidden" id="conceptoId">
+        <div class="space-y-4">
+            <div>
+                <label class="text-xs text-gray-500">Nombre *</label>
+                <input id="conceptoNombre" type="text" class="mt-1 w-full border rounded px-3 py-2 text-sm">
+            </div>
+            <div>
+                <label class="text-xs text-gray-500">Tipo</label>
+                <select id="conceptoTipo" class="mt-1 w-full border rounded px-3 py-2 text-sm">
+                    <option value="MENSUAL">Mensual (cuota)</option>
+                    <option value="EXTRA">Extra (evento, merienda, etc.)</option>
+                </select>
+            </div>
+            <div>
+                <label class="text-xs text-gray-500">Descripción</label>
+                <textarea id="conceptoDesc" class="mt-1 w-full border rounded px-3 py-2 text-sm" rows="2"></textarea>
+            </div>
+        </div>
+        <div id="conceptoError" class="text-red-600 text-sm mt-3 hidden"></div>
+        <div class="flex justify-end gap-3 mt-6">
+            <button onclick="document.getElementById('modalConcepto').classList.add('hidden')" class="px-5 py-2 border rounded-lg text-gray-600">Cancelar</button>
+            <button onclick="guardarConcepto()" class="px-5 py-2 bg-blue-600 text-white rounded-lg font-medium">Guardar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Cuota -->
+<div id="modalCuota" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8">
+        <h3 class="text-xl font-bold text-green-800 mb-6">Configurar monto</h3>
+        <input type="hidden" id="cuotaId">
+        <div class="space-y-4">
+            <div>
+                <label class="text-xs text-gray-500">Cantidad de alumnos</label>
+                <input id="cuotaCant" type="number" min="1" class="mt-1 w-full border rounded px-3 py-2 text-sm">
+            </div>
+            <div>
+                <label class="text-xs text-gray-500">Monto ($)</label>
+                <input id="cuotaMonto" type="number" min="0" class="mt-1 w-full border rounded px-3 py-2 text-sm">
+            </div>
+        </div>
+        <div id="cuotaError" class="text-red-600 text-sm mt-3 hidden"></div>
+        <div class="flex justify-end gap-3 mt-6">
+            <button onclick="document.getElementById('modalCuota').classList.add('hidden')" class="px-5 py-2 border rounded-lg text-gray-600">Cancelar</button>
+            <button onclick="guardarCuota()" class="px-5 py-2 bg-green-600 text-white rounded-lg font-medium">Guardar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+async function logout() {
+    await fetch('/api/auth/logout', {method:'POST'});
+    window.location.href='/login';
+}
+
+fetch('/api/auth/me').then(r=>r.json()).then(u=>{
+    if (!u.id) { window.location.href='/login'; return; }
+    document.getElementById('userInfo').textContent = u.nombre + ' (' + u.rol + ')';
+    cargarConceptos();
+    cargarCuotas();
+});
+
+async function cargarConceptos() {
+    const data = await fetch('/api/conceptos').then(r=>r.json());
+    const tbody = document.getElementById('tablaConceptos');
+    tbody.innerHTML = '';
+    (data||[]).forEach(c => {
+        const activo = c.activo ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500';
+        const activoText = c.activo ? 'Activo' : 'Inactivo';
+        const tipoBadge = c.tipo === 'MENSUAL' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700';
+        tbody.innerHTML += `<tr class="hover:bg-gray-50">
+            <td class="px-4 py-3 font-medium">${c.nombre}</td>
+            <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full text-xs ${tipoBadge}">${c.tipo}</span></td>
+            <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full text-xs ${activo}">${activoText}</span></td>
+            <td class="px-4 py-3 space-x-2">
+                <button onclick="abrirModalConcepto(${JSON.stringify(c).replaceAll('"',"'")})" class="text-blue-600 hover:underline text-xs">Editar</button>
+                <button onclick="toggleConcepto(${c.id_concepto})" class="text-gray-500 hover:underline text-xs">${c.activo ? 'Desactivar' : 'Activar'}</button>
+            </td>
+        </tr>`;
+    });
+}
+
+function abrirModalConcepto(c) {
+    document.getElementById('conceptoId').value = c ? c.id_concepto : '';
+    document.getElementById('conceptoNombre').value = c ? c.nombre : '';
+    document.getElementById('conceptoTipo').value = c ? c.tipo : 'MENSUAL';
+    document.getElementById('conceptoDesc').value = c ? (c.descripcion||'') : '';
+    document.getElementById('modalConceptoTitulo').textContent = c ? 'Editar Concepto' : 'Nuevo Concepto';
+    document.getElementById('conceptoError').classList.add('hidden');
+    document.getElementById('modalConcepto').classList.remove('hidden');
+}
+
+async function guardarConcepto() {
+    const id = document.getElementById('conceptoId').value;
+    const payload = {
+        nombre:      document.getElementById('conceptoNombre').value,
+        tipo:        document.getElementById('conceptoTipo').value,
+        descripcion: document.getElementById('conceptoDesc').value
+    };
+    if (!payload.nombre) { document.getElementById('conceptoError').textContent = 'El nombre es requerido'; document.getElementById('conceptoError').classList.remove('hidden'); return; }
+    const url = id ? '/api/conceptos/' + id : '/api/conceptos';
+    const method = id ? 'PUT' : 'POST';
+    const res = await fetch(url, {method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+    const data = await res.json();
+    if (!res.ok) { document.getElementById('conceptoError').textContent = data.error || 'Error'; document.getElementById('conceptoError').classList.remove('hidden'); return; }
+    document.getElementById('modalConcepto').classList.add('hidden');
+    cargarConceptos();
+}
+
+async function toggleConcepto(id) {
+    const res = await fetch('/api/conceptos/' + id + '/toggle', {method:'POST'});
+    const data = await res.json();
+    if (!data.ok) alert(data.error || 'Error');
+    else cargarConceptos();
+}
+
+async function cargarCuotas() {
+    const data = await fetch('/api/cuotas-config').then(r=>r.json());
+    const tbody = document.getElementById('tablaCuotas');
+    tbody.innerHTML = '';
+    (data||[]).forEach(c => {
+        const monto = Number(c.monto).toLocaleString('es-AR', {style:'currency', currency:'ARS', maximumFractionDigits:0});
+        tbody.innerHTML += `<tr class="hover:bg-gray-50">
+            <td class="px-4 py-3 font-medium">${c.cantidad_hijos} ${c.cantidad_hijos == 1 ? 'alumno' : 'alumnos'}</td>
+            <td class="px-4 py-3 font-mono font-bold text-green-700">${monto}</td>
+            <td class="px-4 py-3 space-x-2">
+                <button onclick="abrirModalCuota(${c.id_config}, ${c.cantidad_hijos}, ${c.monto})" class="text-blue-600 hover:underline text-xs">Editar</button>
+                <button onclick="eliminarCuota(${c.id_config})" class="text-red-400 hover:underline text-xs">Eliminar</button>
+            </td>
+        </tr>`;
+    });
+}
+
+function abrirModalCuota(id, cant, monto) {
+    document.getElementById('cuotaId').value = id || '';
+    document.getElementById('cuotaCant').value = cant || '';
+    document.getElementById('cuotaMonto').value = monto || '';
+    document.getElementById('cuotaError').classList.add('hidden');
+    document.getElementById('modalCuota').classList.remove('hidden');
+}
+
+async function guardarCuota() {
+    const payload = {
+        cantidad_hijos: parseInt(document.getElementById('cuotaCant').value) || 0,
+        monto:          parseFloat(document.getElementById('cuotaMonto').value) || 0
+    };
+    if (!payload.cantidad_hijos || !payload.monto) {
+        document.getElementById('cuotaError').textContent = 'Ambos campos son requeridos';
+        document.getElementById('cuotaError').classList.remove('hidden'); return;
+    }
+    const res = await fetch('/api/cuotas-config', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+    const data = await res.json();
+    if (!res.ok) { document.getElementById('cuotaError').textContent = data.error || 'Error'; document.getElementById('cuotaError').classList.remove('hidden'); return; }
+    document.getElementById('modalCuota').classList.add('hidden');
+    cargarCuotas();
+}
+
+async function eliminarCuota(id) {
+    if (!confirm('¿Eliminar esta configuración?')) return;
+    const res = await fetch('/api/cuotas-config/' + id, {method:'DELETE'});
+    const data = await res.json();
+    if (!data.ok) alert(data.error || 'Error');
+    else cargarCuotas();
+}
+</script>
+</body>
+</html>

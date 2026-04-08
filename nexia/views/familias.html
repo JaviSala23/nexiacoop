@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexia - Familias</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex">
+<!-- Sidebar -->
+<aside class="w-64 bg-blue-900 text-white flex flex-col min-h-screen fixed">
+    <div class="p-6 border-b border-blue-700">
+        <h1 class="text-2xl font-bold">NEXIA</h1>
+        <p class="text-blue-300 text-xs mt-1">Cooperadora Escolar</p>
+    </div>
+    <nav class="flex-1 p-4 space-y-1">
+        <a href="/dashboard"    class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">🏠 Dashboard</a>
+        <a href="/familias"     class="flex items-center gap-3 px-4 py-2 rounded-lg bg-blue-700 font-medium">👨‍👩‍👧 Familias</a>
+        <a href="/talones"      class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">🧾 Talones</a>
+        <a href="/pagos"        class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">💳 Pagos</a>
+        <a href="/conceptos"    class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">📂 Conceptos</a>
+        <a href="/contabilidad" class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">📊 Contabilidad</a>
+        <a href="/admin"        class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">⚙️ Admin</a>
+    </nav>
+    <div class="p-4 border-t border-blue-700">
+        <span id="userInfo" class="text-blue-300 text-sm"></span>
+        <button onclick="logout()" class="mt-2 w-full text-left text-sm text-red-300 hover:text-red-200">Cerrar sesión</button>
+    </div>
+</aside>
+
+<!-- Content -->
+<main class="ml-64 flex-1 p-8">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold text-blue-900">Familias</h2>
+        <button onclick="abrirModalNuevo()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-medium">+ Nueva familia</button>
+    </div>
+
+    <!-- Filtros -->
+    <div class="bg-white rounded-xl shadow p-4 mb-6 flex flex-wrap gap-4 items-end">
+        <div>
+            <label class="block text-xs text-gray-500 mb-1">Estado</label>
+            <select id="filtroEstado" class="border rounded px-3 py-2 text-sm">
+                <option value="">Todos</option>
+                <option value="ACTIVA" selected>Activas</option>
+                <option value="INACTIVA">Inactivas</option>
+                <option value="BAJA">Baja</option>
+            </select>
+        </div>
+        <button onclick="cargarFamilias()" class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded text-sm">Buscar</button>
+    </div>
+
+    <!-- Tabla -->
+    <div class="bg-white rounded-xl shadow overflow-hidden">
+        <table class="w-full text-sm">
+            <thead class="bg-blue-50 text-blue-800">
+                <tr>
+                    <th class="px-4 py-3 text-left">Nro</th>
+                    <th class="px-4 py-3 text-left">Tutor principal</th>
+                    <th class="px-4 py-3 text-left">DNI</th>
+                    <th class="px-4 py-3 text-left">Teléfono</th>
+                    <th class="px-4 py-3 text-left">Alumnos</th>
+                    <th class="px-4 py-3 text-left">Estado</th>
+                    <th class="px-4 py-3 text-left">Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="tablaBB" class="divide-y divide-gray-100"></tbody>
+        </table>
+        <p id="sinResultados" class="text-center text-gray-400 py-8 hidden">Sin resultados</p>
+    </div>
+</main>
+
+<!-- Modal familia -->
+<div id="modalFamilia" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-8">
+        <h3 id="modalTitulo" class="text-xl font-bold text-blue-900 mb-6">Nueva Familia</h3>
+        <input type="hidden" id="famId">
+
+        <div class="grid grid-cols-2 gap-4 mb-4">
+            <div>
+                <label class="text-xs text-gray-500">N° de familia</label>
+                <input id="famNumero" type="number" class="mt-1 w-full border rounded px-3 py-2 text-sm" placeholder="Ej: 100">
+            </div>
+            <div>
+                <label class="text-xs text-gray-500">Estado</label>
+                <select id="famEstado" class="mt-1 w-full border rounded px-3 py-2 text-sm">
+                    <option value="ACTIVA">Activa</option>
+                    <option value="INACTIVA">Inactiva</option>
+                    <option value="BAJA">Baja</option>
+                </select>
+            </div>
+            <div class="col-span-2">
+                <label class="text-xs text-gray-500">Dirección</label>
+                <input id="famDireccion" type="text" class="mt-1 w-full border rounded px-3 py-2 text-sm">
+            </div>
+            <div>
+                <label class="text-xs text-gray-500">Teléfono</label>
+                <input id="famTelefono" type="text" class="mt-1 w-full border rounded px-3 py-2 text-sm">
+            </div>
+            <div class="col-span-2">
+                <label class="text-xs text-gray-500">Observaciones</label>
+                <textarea id="famObservaciones" class="mt-1 w-full border rounded px-3 py-2 text-sm" rows="2"></textarea>
+            </div>
+        </div>
+
+        <!-- Tutores -->
+        <div class="mb-4">
+            <div class="flex justify-between items-center mb-2">
+                <h4 class="font-semibold text-gray-700">Tutores <span class="text-red-500">*</span> <span class="text-gray-400 text-xs">(mín. 1, máx. 2)</span></h4>
+                <button onclick="agregarTutor()" class="text-sm text-blue-600 hover:underline">+ Agregar</button>
+            </div>
+            <div id="tutoresList" class="space-y-3"></div>
+        </div>
+
+        <!-- Alumnos -->
+        <div class="mb-6">
+            <div class="flex justify-between items-center mb-2">
+                <h4 class="font-semibold text-gray-700">Alumnos</h4>
+                <button onclick="agregarAlumno()" class="text-sm text-blue-600 hover:underline">+ Agregar</button>
+            </div>
+            <div id="alumnosList" class="space-y-3"></div>
+        </div>
+
+        <div id="modalError" class="text-red-600 text-sm mb-3 hidden"></div>
+        <div class="flex justify-end gap-3">
+            <button onclick="cerrarModal()" class="px-5 py-2 rounded-lg border text-gray-600 hover:bg-gray-50">Cancelar</button>
+            <button onclick="guardarFamilia()" class="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium">Guardar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal detalle -->
+<div id="modalDetalle" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto p-8">
+        <h3 class="text-xl font-bold text-blue-900 mb-4">Detalle de Familia</h3>
+        <div id="detalleContenido" class="text-sm text-gray-700"></div>
+        <div class="flex justify-end mt-6 gap-3">
+            <button onclick="document.getElementById('modalDetalle').classList.add('hidden')" class="px-5 py-2 border rounded-lg text-gray-600">Cerrar</button>
+            <button id="btnEditarDetalle" onclick="editarDesdeDetalle()" class="px-5 py-2 bg-blue-600 text-white rounded-lg">Editar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let familiaDetalleActual = null;
+
+async function logout() {
+    await fetch('/api/auth/logout', {method:'POST'});
+    window.location.href='/login';
+}
+
+fetch('/api/auth/me').then(r=>r.json()).then(u=>{
+    if (!u.id) { window.location.href='/login'; return; }
+    document.getElementById('userInfo').textContent = u.nombre + ' (' + u.rol + ')';
+    cargarFamilias();
+});
+
+async function cargarFamilias() {
+    const estado = document.getElementById('filtroEstado').value;
+    const url = '/api/familias' + (estado ? '?estado=' + estado : '');
+    const data = await fetch(url).then(r=>r.json());
+    const tbody = document.getElementById('tablaBB');
+    const sinRes = document.getElementById('sinResultados');
+    tbody.innerHTML = '';
+    if (!Array.isArray(data) || data.length === 0) { sinRes.classList.remove('hidden'); return; }
+    sinRes.classList.add('hidden');
+    data.forEach(f => {
+        const badgeColor = f.estado === 'ACTIVA' ? 'bg-green-100 text-green-700' : f.estado === 'INACTIVA' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700';
+        tbody.innerHTML += `<tr class="hover:bg-gray-50 cursor-pointer" onclick="verDetalle(${f.id_familia})">
+            <td class="px-4 py-3 font-mono font-bold">${f.numero_familia}</td>
+            <td class="px-4 py-3">${f.nombre_tutor_principal || '-'}</td>
+            <td class="px-4 py-3 font-mono">${f.dni_tutor_principal || '-'}</td>
+            <td class="px-4 py-3">${f.telefono_tutor_principal || '-'}</td>
+            <td class="px-4 py-3 text-center"><span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">${f.cantidad_alumnos || 0}</span></td>
+            <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full text-xs font-medium ${badgeColor}">${f.estado}</span></td>
+            <td class="px-4 py-3">
+                <button onclick="event.stopPropagation(); abrirModalEditar(${f.id_familia})" class="text-blue-600 hover:underline text-xs mr-2">Editar</button>
+                <button onclick="event.stopPropagation(); cambiarEstado(${f.id_familia}, '${f.estado}')" class="text-gray-500 hover:underline text-xs">Estado</button>
+            </td>
+        </tr>`;
+    });
+}
+
+async function verDetalle(id) {
+    const [fam, tutores, alumnos] = await Promise.all([
+        fetch('/api/familias/' + id).then(r=>r.json()),
+        fetch('/api/familias/' + id + '/tutores').then(r=>r.json()),
+        fetch('/api/familias/' + id + '/alumnos').then(r=>r.json())
+    ]);
+    familiaDetalleActual = id;
+    let html = `<p class="mb-1"><strong>Nro:</strong> ${fam.numero_familia}</p>
+        <p class="mb-1"><strong>Dirección:</strong> ${fam.direccion || '-'}</p>
+        <p class="mb-4"><strong>Teléfono:</strong> ${fam.telefono || '-'}</p>
+        <h4 class="font-semibold mb-2">Tutores</h4><ul class="mb-4 space-y-1">`;
+    (tutores||[]).forEach(t => {
+        html += `<li class="flex items-center gap-2">${t.es_principal ? '⭐' : '👤'} ${t.nombre_completo} — DNI ${t.dni}${t.telefono ? ' — ☎ ' + t.telefono : ''}</li>`;
+    });
+    html += `</ul><h4 class="font-semibold mb-2">Alumnos</h4><ul class="space-y-1">`;
+    (alumnos||[]).forEach(a => {
+        html += `<li>🎒 ${a.nombre_completo} — DNI ${a.dni} — ${a.anio_escolar || ''} <span class="text-xs text-gray-400">(${a.estado})</span></li>`;
+    });
+    html += '</ul>';
+    document.getElementById('detalleContenido').innerHTML = html;
+    document.getElementById('modalDetalle').classList.remove('hidden');
+}
+
+function editarDesdeDetalle() {
+    document.getElementById('modalDetalle').classList.add('hidden');
+    if (familiaDetalleActual) abrirModalEditar(familiaDetalleActual);
+}
+
+let tutorCount = 0, alumnoCount = 0;
+
+function agregarTutor(datos) {
+    if (tutorCount >= 2) return;
+    const idx = tutorCount++;
+    const d = datos || {};
+    const div = document.createElement('div');
+    div.id = 'tutor_' + idx;
+    div.className = 'border rounded-lg p-3 bg-gray-50 grid grid-cols-2 gap-3';
+    div.innerHTML = `
+        <input type="hidden" class="tutor-id" value="${d.id_tutor||''}">
+        <div><label class="text-xs text-gray-500">DNI *</label><input type="text" class="tutor-dni mt-1 w-full border rounded px-2 py-1 text-sm" value="${d.dni||''}" placeholder="DNI sin puntos"></div>
+        <div><label class="text-xs text-gray-500">Nombre completo *</label><input type="text" class="tutor-nombre mt-1 w-full border rounded px-2 py-1 text-sm" value="${d.nombre_completo||''}"></div>
+        <div><label class="text-xs text-gray-500">Teléfono</label><input type="text" class="tutor-tel mt-1 w-full border rounded px-2 py-1 text-sm" value="${d.telefono||''}"></div>
+        <div><label class="text-xs text-gray-500">Email</label><input type="text" class="tutor-email mt-1 w-full border rounded px-2 py-1 text-sm" value="${d.email||''}"></div>
+        <div class="flex items-center gap-2 col-span-2">
+            <input type="checkbox" class="tutor-principal" ${d.es_principal ? 'checked' : ''} ${idx===0?'checked':''}>
+            <label class="text-sm text-gray-600">Tutor principal</label>
+            ${idx>0 ? `<button type="button" onclick="quitarTutor(${idx})" class="ml-auto text-red-400 hover:text-red-600 text-xs">Quitar</button>` : ''}
+        </div>`;
+    document.getElementById('tutoresList').appendChild(div);
+}
+
+function quitarTutor(idx) {
+    const el = document.getElementById('tutor_' + idx);
+    if (el) { el.remove(); tutorCount--; }
+}
+
+function agregarAlumno(datos) {
+    const idx = alumnoCount++;
+    const d = datos || {};
+    const div = document.createElement('div');
+    div.id = 'alumno_' + idx;
+    div.className = 'border rounded-lg p-3 bg-gray-50 grid grid-cols-2 gap-3';
+    div.innerHTML = `
+        <input type="hidden" class="alumno-id" value="${d.id_alumno||''}">
+        <div><label class="text-xs text-gray-500">DNI *</label><input type="text" class="alumno-dni mt-1 w-full border rounded px-2 py-1 text-sm" value="${d.dni||''}"></div>
+        <div><label class="text-xs text-gray-500">Nombre completo *</label><input type="text" class="alumno-nombre mt-1 w-full border rounded px-2 py-1 text-sm" value="${d.nombre_completo||''}"></div>
+        <div><label class="text-xs text-gray-500">Fecha de nacimiento</label><input type="date" class="alumno-fnac mt-1 w-full border rounded px-2 py-1 text-sm" value="${d.fecha_nacimiento||''}"></div>
+        <div><label class="text-xs text-gray-500">Año escolar</label><input type="text" class="alumno-anio mt-1 w-full border rounded px-2 py-1 text-sm" value="${d.anio_escolar||''}" placeholder="Ej: 3° grado"></div>
+        <div class="col-span-2 flex justify-end">
+            <button type="button" onclick="quitarAlumno(${idx})" class="text-red-400 hover:text-red-600 text-xs">Quitar</button>
+        </div>`;
+    document.getElementById('alumnosList').appendChild(div);
+}
+
+function quitarAlumno(idx) {
+    const el = document.getElementById('alumno_' + idx);
+    if (el) { el.remove(); alumnoCount--; }
+}
+
+function limpiarModal() {
+    document.getElementById('famId').value = '';
+    document.getElementById('famNumero').value = '';
+    document.getElementById('famEstado').value = 'ACTIVA';
+    document.getElementById('famDireccion').value = '';
+    document.getElementById('famTelefono').value = '';
+    document.getElementById('famObservaciones').value = '';
+    document.getElementById('tutoresList').innerHTML = '';
+    document.getElementById('alumnosList').innerHTML = '';
+    document.getElementById('modalError').classList.add('hidden');
+    tutorCount = 0; alumnoCount = 0;
+    agregarTutor();
+}
+
+function abrirModalNuevo() {
+    limpiarModal();
+    document.getElementById('modalTitulo').textContent = 'Nueva Familia';
+    document.getElementById('modalFamilia').classList.remove('hidden');
+}
+
+async function abrirModalEditar(id) {
+    limpiarModal();
+    document.getElementById('modalTitulo').textContent = 'Editar Familia';
+    const [fam, tutores, alumnos] = await Promise.all([
+        fetch('/api/familias/' + id).then(r=>r.json()),
+        fetch('/api/familias/' + id + '/tutores').then(r=>r.json()),
+        fetch('/api/familias/' + id + '/alumnos').then(r=>r.json())
+    ]);
+    document.getElementById('famId').value = id;
+    document.getElementById('famNumero').value = fam.numero_familia;
+    document.getElementById('famEstado').value = fam.estado;
+    document.getElementById('famDireccion').value = fam.direccion || '';
+    document.getElementById('famTelefono').value = fam.telefono || '';
+    document.getElementById('famObservaciones').value = fam.observaciones || '';
+    document.getElementById('tutoresList').innerHTML = '';
+    tutorCount = 0;
+    (tutores||[]).forEach(t => agregarTutor(t));
+    document.getElementById('alumnosList').innerHTML = '';
+    alumnoCount = 0;
+    (alumnos||[]).forEach(a => agregarAlumno(a));
+    document.getElementById('modalFamilia').classList.remove('hidden');
+}
+
+function cerrarModal() {
+    document.getElementById('modalFamilia').classList.add('hidden');
+}
+
+function recogerTutores() {
+    const items = document.querySelectorAll('#tutoresList > div');
+    return Array.from(items).map(d => ({
+        id_tutor:       d.querySelector('.tutor-id')?.value || '',
+        dni:            d.querySelector('.tutor-dni').value,
+        nombre_completo: d.querySelector('.tutor-nombre').value,
+        telefono:       d.querySelector('.tutor-tel').value,
+        email:          d.querySelector('.tutor-email').value,
+        es_principal:   d.querySelector('.tutor-principal').checked
+    }));
+}
+
+function recogerAlumnos() {
+    const items = document.querySelectorAll('#alumnosList > div');
+    return Array.from(items).map(d => ({
+        id_alumno:      d.querySelector('.alumno-id')?.value || '',
+        dni:            d.querySelector('.alumno-dni').value,
+        nombre_completo: d.querySelector('.alumno-nombre').value,
+        fecha_nacimiento: d.querySelector('.alumno-fnac').value,
+        anio_escolar:   d.querySelector('.alumno-anio').value
+    }));
+}
+
+async function guardarFamilia() {
+    const id = document.getElementById('famId').value;
+    const tutores = recogerTutores();
+    const alumnos = recogerAlumnos();
+    const errEl = document.getElementById('modalError');
+    if (!tutores.length || !tutores[0].dni || !tutores[0].nombre_completo) {
+        errEl.textContent = 'Se requiere al menos un tutor con DNI y nombre.';
+        errEl.classList.remove('hidden'); return;
+    }
+
+    const payload = {
+        numero_familia: parseInt(document.getElementById('famNumero').value) || 0,
+        estado:         document.getElementById('famEstado').value,
+        direccion:      document.getElementById('famDireccion').value,
+        telefono:       document.getElementById('famTelefono').value,
+        observaciones:  document.getElementById('famObservaciones').value,
+        tutores, alumnos
+    };
+
+    let url = '/api/familias', method = 'POST';
+    if (id) { url += '/' + id; method = 'PUT'; }
+
+    const res = await fetch(url, {method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = data.error || 'Error al guardar'; errEl.classList.remove('hidden'); return; }
+    cerrarModal();
+    cargarFamilias();
+}
+
+async function cambiarEstado(id, estadoActual) {
+    const opciones = ['ACTIVA','INACTIVA','BAJA'].filter(e => e !== estadoActual);
+    const nuevo = prompt('Cambiar estado a (opciones: ' + opciones.join(', ') + '):', opciones[0]);
+    if (!nuevo) return;
+    const res = await fetch('/api/familias/' + id + '/estado', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({estado: nuevo.toUpperCase()})});
+    const data = await res.json();
+    if (!data.ok) alert(data.error || 'Error');
+    else cargarFamilias();
+}
+</script>
+</body>
+</html>

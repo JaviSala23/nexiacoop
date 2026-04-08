@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexia - Contabilidad</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex">
+<!-- Sidebar -->
+<aside class="w-64 bg-blue-900 text-white flex flex-col min-h-screen fixed">
+    <div class="p-6 border-b border-blue-700">
+        <h1 class="text-2xl font-bold">NEXIA</h1>
+        <p class="text-blue-300 text-xs mt-1">Cooperadora Escolar</p>
+    </div>
+    <nav class="flex-1 p-4 space-y-1">
+        <a href="/dashboard"    class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">🏠 Dashboard</a>
+        <a href="/familias"     class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">👨‍👩‍👧 Familias</a>
+        <a href="/talones"      class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">🧾 Talones</a>
+        <a href="/pagos"        class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">💳 Pagos</a>
+        <a href="/conceptos"    class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">📂 Conceptos</a>
+        <a href="/contabilidad" class="flex items-center gap-3 px-4 py-2 rounded-lg bg-blue-700 font-medium">📊 Contabilidad</a>
+        <a href="/admin"        class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">⚙️ Admin</a>
+    </nav>
+    <div class="p-4 border-t border-blue-700">
+        <span id="userInfo" class="text-blue-300 text-sm"></span>
+        <button onclick="logout()" class="mt-2 w-full text-left text-sm text-red-300 hover:text-red-200">Cerrar sesión</button>
+    </div>
+</aside>
+
+<main class="ml-64 flex-1 p-8">
+    <h2 class="text-2xl font-bold text-blue-900 mb-6">Contabilidad</h2>
+
+    <!-- Tabs -->
+    <div class="flex gap-2 mb-6">
+        <button onclick="mostrarTab('movimientos')" id="tabMovimientos" class="px-5 py-2 rounded-lg font-medium bg-blue-600 text-white">Movimientos</button>
+        <button onclick="mostrarTab('cuentas')" id="tabCuentas" class="px-5 py-2 rounded-lg font-medium bg-white text-gray-600 hover:bg-gray-50">Plan de Cuentas</button>
+        <button onclick="mostrarTab('resumen')" id="tabResumen" class="px-5 py-2 rounded-lg font-medium bg-white text-gray-600 hover:bg-gray-50">Resumen Anual</button>
+    </div>
+
+    <!-- TAB: Movimientos -->
+    <div id="secMovimientos">
+        <div class="bg-white rounded-xl shadow p-4 mb-4 flex flex-wrap gap-4 items-end">
+            <div>
+                <label class="text-xs text-gray-500">Tipo</label>
+                <select id="filtroTipo" class="mt-1 border rounded px-3 py-2 text-sm">
+                    <option value="">Todos</option>
+                    <option value="INGRESO">Ingresos</option>
+                    <option value="EGRESO">Egresos</option>
+                </select>
+            </div>
+            <div>
+                <label class="text-xs text-gray-500">Desde</label>
+                <input id="filtroDesde" type="date" class="mt-1 border rounded px-3 py-2 text-sm">
+            </div>
+            <div>
+                <label class="text-xs text-gray-500">Hasta</label>
+                <input id="filtroHasta" type="date" class="mt-1 border rounded px-3 py-2 text-sm">
+            </div>
+            <button onclick="cargarMovimientos()" class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded text-sm">Filtrar</button>
+            <button onclick="abrirModalMovimiento()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm font-medium">+ Nuevo movimiento</button>
+        </div>
+
+        <div class="bg-white rounded-xl shadow overflow-hidden mb-4">
+            <table class="w-full text-sm">
+                <thead class="bg-blue-50 text-blue-800">
+                    <tr>
+                        <th class="px-4 py-3 text-left">Fecha</th>
+                        <th class="px-4 py-3 text-left">Cuenta</th>
+                        <th class="px-4 py-3 text-left">Descripción</th>
+                        <th class="px-4 py-3 text-left">Tipo</th>
+                        <th class="px-4 py-3 text-left">Medio</th>
+                        <th class="px-4 py-3 text-right">Monto</th>
+                        <th class="px-4 py-3 text-left">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaMovimientos" class="divide-y divide-gray-100"></tbody>
+            </table>
+        </div>
+        <div id="resumenMovimientos" class="grid grid-cols-3 gap-4"></div>
+    </div>
+
+    <!-- TAB: Cuentas -->
+    <div id="secCuentas" class="hidden">
+        <div class="flex justify-between items-center mb-4">
+            <p class="text-gray-600 text-sm">Clasificación de ingresos y egresos para los movimientos contables.</p>
+            <button onclick="abrirModalCuenta()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm font-medium">+ Nueva cuenta</button>
+        </div>
+        <div class="bg-white rounded-xl shadow overflow-hidden">
+            <table class="w-full text-sm">
+                <thead class="bg-blue-50 text-blue-800">
+                    <tr>
+                        <th class="px-4 py-3 text-left">Código</th>
+                        <th class="px-4 py-3 text-left">Nombre</th>
+                        <th class="px-4 py-3 text-left">Tipo</th>
+                        <th class="px-4 py-3 text-left">Estado</th>
+                        <th class="px-4 py-3 text-left">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaCuentas" class="divide-y divide-gray-100"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- TAB: Resumen anual -->
+    <div id="secResumen" class="hidden">
+        <div class="flex gap-4 items-end mb-4">
+            <div>
+                <label class="text-xs text-gray-500">Año</label>
+                <input id="resAnio" type="number" value="2025" class="mt-1 border rounded px-3 py-2 text-sm w-24">
+            </div>
+            <button onclick="cargarResumen()" class="bg-blue-600 text-white px-4 py-2 rounded text-sm">Ver resumen</button>
+        </div>
+        <div id="resumenAnual" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+        <div id="resumenMensualSec" class="mt-6">
+            <h4 class="font-semibold text-gray-700 mb-3">Evolución mensual</h4>
+            <div id="tablaMensual" class="bg-white rounded-xl shadow overflow-hidden">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50 text-gray-700">
+                        <tr>
+                            <th class="px-4 py-3 text-left">Mes</th>
+                            <th class="px-4 py-3 text-right">Ingresos</th>
+                            <th class="px-4 py-3 text-right">Egresos</th>
+                            <th class="px-4 py-3 text-right">Resultado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaResumenMensual" class="divide-y divide-gray-100"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- Modal movimiento -->
+<div id="modalMovimiento" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
+        <h3 class="text-xl font-bold text-blue-900 mb-6">Nuevo Movimiento Manual</h3>
+        <div class="space-y-4">
+            <div>
+                <label class="text-xs text-gray-500">Cuenta *</label>
+                <select id="movCuenta" class="mt-1 w-full border rounded px-3 py-2 text-sm"></select>
+            </div>
+            <div>
+                <label class="text-xs text-gray-500">Fecha *</label>
+                <input id="movFecha" type="date" class="mt-1 w-full border rounded px-3 py-2 text-sm">
+            </div>
+            <div>
+                <label class="text-xs text-gray-500">Descripción</label>
+                <input id="movDesc" type="text" class="mt-1 w-full border rounded px-3 py-2 text-sm">
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="text-xs text-gray-500">Monto *</label>
+                    <input id="movMonto" type="number" min="0" class="mt-1 w-full border rounded px-3 py-2 text-sm">
+                </div>
+                <div>
+                    <label class="text-xs text-gray-500">Tipo</label>
+                    <select id="movTipo" class="mt-1 w-full border rounded px-3 py-2 text-sm">
+                        <option value="EGRESO">Egreso</option>
+                        <option value="INGRESO">Ingreso</option>
+                    </select>
+                </div>
+            </div>
+            <div>
+                <label class="text-xs text-gray-500">Medio de pago</label>
+                <select id="movMedio" class="mt-1 w-full border rounded px-3 py-2 text-sm">
+                    <option value="EFECTIVO">Efectivo</option>
+                    <option value="TRANSFERENCIA">Transferencia</option>
+                    <option value="MERCADOPAGO">Mercado Pago</option>
+                    <option value="OTRO">Otro</option>
+                </select>
+            </div>
+        </div>
+        <div id="movError" class="text-red-600 text-sm mt-3 hidden"></div>
+        <div class="flex justify-end gap-3 mt-6">
+            <button onclick="document.getElementById('modalMovimiento').classList.add('hidden')" class="px-5 py-2 border rounded-lg text-gray-600">Cancelar</button>
+            <button onclick="guardarMovimiento()" class="px-5 py-2 bg-blue-600 text-white rounded-lg font-medium">Guardar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal cuenta -->
+<div id="modalCuenta" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8">
+        <h3 id="modalCuentaTitulo" class="text-xl font-bold text-blue-900 mb-6">Nueva Cuenta</h3>
+        <input type="hidden" id="cuentaId">
+        <div class="space-y-4">
+            <div>
+                <label class="text-xs text-gray-500">Código *</label>
+                <input id="cuentaCodigo" type="text" placeholder="Ej: ING-010" class="mt-1 w-full border rounded px-3 py-2 text-sm">
+            </div>
+            <div>
+                <label class="text-xs text-gray-500">Nombre *</label>
+                <input id="cuentaNombre" type="text" class="mt-1 w-full border rounded px-3 py-2 text-sm">
+            </div>
+            <div>
+                <label class="text-xs text-gray-500">Tipo</label>
+                <select id="cuentaTipo" class="mt-1 w-full border rounded px-3 py-2 text-sm">
+                    <option value="INGRESO">Ingreso</option>
+                    <option value="EGRESO">Egreso</option>
+                </select>
+            </div>
+        </div>
+        <div id="cuentaError" class="text-red-600 text-sm mt-3 hidden"></div>
+        <div class="flex justify-end gap-3 mt-6">
+            <button onclick="document.getElementById('modalCuenta').classList.add('hidden')" class="px-5 py-2 border rounded-lg text-gray-600">Cancelar</button>
+            <button onclick="guardarCuenta()" class="px-5 py-2 bg-blue-600 text-white rounded-lg font-medium">Guardar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+async function logout() {
+    await fetch('/api/auth/logout', {method:'POST'});
+    window.location.href='/login';
+}
+
+fetch('/api/auth/me').then(r=>r.json()).then(u=>{
+    if (!u.id) { window.location.href='/login'; return; }
+    document.getElementById('userInfo').textContent = u.nombre + ' (' + u.rol + ')';
+    // Fecha hoy para filtros
+    const hoy = new Date().toISOString().slice(0,10);
+    const primero = hoy.slice(0,7) + '-01';
+    document.getElementById('filtroDesde').value = primero;
+    document.getElementById('filtroHasta').value = hoy;
+    cargarMovimientos();
+    cargarCuentas();
+});
+
+function mostrarTab(tab) {
+    ['movimientos','cuentas','resumen'].forEach(t => {
+        document.getElementById('sec' + t.charAt(0).toUpperCase() + t.slice(1)).classList.add('hidden');
+        document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1)).className = 'px-5 py-2 rounded-lg font-medium bg-white text-gray-600 hover:bg-gray-50';
+    });
+    document.getElementById('sec' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.remove('hidden');
+    document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).className = 'px-5 py-2 rounded-lg font-medium bg-blue-600 text-white';
+}
+
+async function cargarMovimientos() {
+    const tipo  = document.getElementById('filtroTipo').value;
+    const desde = document.getElementById('filtroDesde').value;
+    const hasta = document.getElementById('filtroHasta').value;
+    const params = new URLSearchParams();
+    if (tipo)  params.set('tipo', tipo);
+    if (desde) params.set('desde', desde);
+    if (hasta) params.set('hasta', hasta);
+    const data = await fetch('/api/contabilidad/movimientos?' + params).then(r=>r.json());
+    const tbody = document.getElementById('tablaMovimientos');
+    tbody.innerHTML = '';
+    let totIngreso = 0, totEgreso = 0;
+    (data||[]).forEach(m => {
+        const tipoCls = m.tipo === 'INGRESO' ? 'text-green-700 font-semibold' : 'text-red-600 font-semibold';
+        const monto = Number(m.monto).toLocaleString('es-AR', {style:'currency', currency:'ARS', maximumFractionDigits:0});
+        if (m.tipo === 'INGRESO') totIngreso += Number(m.monto);
+        else totEgreso += Number(m.monto);
+        const delBtn = m.es_manual ? `<button onclick="eliminarMovimiento(${m.id_movimiento})" class="text-red-400 hover:text-red-600 text-xs">Eliminar</button>` : '<span class="text-gray-300 text-xs">Auto</span>';
+        tbody.innerHTML += `<tr class="hover:bg-gray-50">
+            <td class="px-4 py-2">${m.fecha}</td>
+            <td class="px-4 py-2"><span class="text-xs text-gray-500">${m.codigo_cuenta}</span> ${m.nombre_cuenta}</td>
+            <td class="px-4 py-2">${m.descripcion||''}</td>
+            <td class="px-4 py-2 ${tipoCls}">${m.tipo}</td>
+            <td class="px-4 py-2 text-xs">${m.medio_pago || '-'}</td>
+            <td class="px-4 py-2 text-right font-mono">${monto}</td>
+            <td class="px-4 py-2">${delBtn}</td>
+        </tr>`;
+    });
+    const res = document.getElementById('resumenMovimientos');
+    const fmt = v => Number(v).toLocaleString('es-AR', {style:'currency', currency:'ARS', maximumFractionDigits:0});
+    const resultado = totIngreso - totEgreso;
+    res.innerHTML = `
+        <div class="bg-white rounded-xl shadow p-4 border-l-4 border-green-500"><p class="text-sm text-gray-500">Total Ingresos</p><p class="text-2xl font-bold text-green-700 mt-1">${fmt(totIngreso)}</p></div>
+        <div class="bg-white rounded-xl shadow p-4 border-l-4 border-red-500"><p class="text-sm text-gray-500">Total Egresos</p><p class="text-2xl font-bold text-red-600 mt-1">${fmt(totEgreso)}</p></div>
+        <div class="bg-white rounded-xl shadow p-4 border-l-4 ${resultado >= 0 ? 'border-blue-500' : 'border-yellow-500'}"><p class="text-sm text-gray-500">Resultado</p><p class="text-2xl font-bold ${resultado >= 0 ? 'text-blue-700' : 'text-yellow-700'} mt-1">${fmt(resultado)}</p></div>`;
+}
+
+async function eliminarMovimiento(id) {
+    if (!confirm('¿Eliminar este movimiento manual?')) return;
+    const res = await fetch('/api/contabilidad/movimientos/' + id, {method:'DELETE'});
+    const data = await res.json();
+    if (!data.ok) alert(data.error || 'No se pudo eliminar');
+    else cargarMovimientos();
+}
+
+let cuentasCache = [];
+async function cargarCuentas() {
+    cuentasCache = await fetch('/api/contabilidad/cuentas').then(r=>r.json());
+    const tbody = document.getElementById('tablaCuentas');
+    tbody.innerHTML = '';
+    const select = document.getElementById('movCuenta');
+    select.innerHTML = '';
+    (cuentasCache||[]).forEach(c => {
+        const activo = c.activo ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500';
+        const tipoCls = c.tipo === 'INGRESO' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700';
+        tbody.innerHTML += `<tr class="hover:bg-gray-50">
+            <td class="px-4 py-3 font-mono">${c.codigo}</td>
+            <td class="px-4 py-3">${c.nombre}</td>
+            <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full text-xs ${tipoCls}">${c.tipo}</span></td>
+            <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full text-xs ${activo}">${c.activo ? 'Activa' : 'Inactiva'}</span></td>
+            <td class="px-4 py-3 space-x-2">
+                <button onclick="abrirModalCuenta(${JSON.stringify(c).replaceAll('"',"'")})" class="text-blue-600 hover:underline text-xs">Editar</button>
+                <button onclick="toggleCuenta(${c.id_cuenta})" class="text-gray-500 hover:underline text-xs">${c.activo ? 'Desactivar' : 'Activar'}</button>
+            </td>
+        </tr>`;
+        if (c.activo) {
+            const opt = document.createElement('option');
+            opt.value = c.id_cuenta;
+            opt.textContent = c.codigo + ' - ' + c.nombre;
+            select.appendChild(opt);
+        }
+    });
+}
+
+async function toggleCuenta(id) {
+    await fetch('/api/contabilidad/cuentas/' + id + '/toggle', {method:'POST'});
+    cargarCuentas();
+}
+
+function abrirModalCuenta(c) {
+    document.getElementById('cuentaId').value = c ? c.id_cuenta : '';
+    document.getElementById('cuentaCodigo').value = c ? c.codigo : '';
+    document.getElementById('cuentaNombre').value = c ? c.nombre : '';
+    document.getElementById('cuentaTipo').value = c ? c.tipo : 'EGRESO';
+    document.getElementById('modalCuentaTitulo').textContent = c ? 'Editar Cuenta' : 'Nueva Cuenta';
+    document.getElementById('cuentaError').classList.add('hidden');
+    document.getElementById('modalCuenta').classList.remove('hidden');
+}
+
+async function guardarCuenta() {
+    const id = document.getElementById('cuentaId').value;
+    const payload = {
+        codigo: document.getElementById('cuentaCodigo').value,
+        nombre: document.getElementById('cuentaNombre').value,
+        tipo:   document.getElementById('cuentaTipo').value
+    };
+    if (!payload.codigo || !payload.nombre) {
+        document.getElementById('cuentaError').textContent = 'Código y nombre son requeridos';
+        document.getElementById('cuentaError').classList.remove('hidden'); return;
+    }
+    const url = id ? '/api/contabilidad/cuentas/' + id : '/api/contabilidad/cuentas';
+    const method = id ? 'PUT' : 'POST';
+    const res = await fetch(url, {method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+    const data = await res.json();
+    if (!res.ok) { document.getElementById('cuentaError').textContent = data.error || 'Error'; document.getElementById('cuentaError').classList.remove('hidden'); return; }
+    document.getElementById('modalCuenta').classList.add('hidden');
+    cargarCuentas();
+}
+
+function abrirModalMovimiento() {
+    document.getElementById('movFecha').value = new Date().toISOString().slice(0,10);
+    document.getElementById('movDesc').value = '';
+    document.getElementById('movMonto').value = '';
+    document.getElementById('movTipo').value = 'EGRESO';
+    document.getElementById('movMedio').value = 'EFECTIVO';
+    document.getElementById('movError').classList.add('hidden');
+    document.getElementById('modalMovimiento').classList.remove('hidden');
+}
+
+async function guardarMovimiento() {
+    const payload = {
+        id_cuenta:   parseInt(document.getElementById('movCuenta').value),
+        fecha:       document.getElementById('movFecha').value,
+        descripcion: document.getElementById('movDesc').value,
+        monto:       parseFloat(document.getElementById('movMonto').value),
+        tipo:        document.getElementById('movTipo').value,
+        medio_pago:  document.getElementById('movMedio').value
+    };
+    if (!payload.id_cuenta || !payload.monto || !payload.fecha) {
+        document.getElementById('movError').textContent = 'Cuenta, fecha y monto son obligatorios';
+        document.getElementById('movError').classList.remove('hidden'); return;
+    }
+    const res = await fetch('/api/contabilidad/movimientos', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+    const data = await res.json();
+    if (!res.ok) { document.getElementById('movError').textContent = data.error || 'Error'; document.getElementById('movError').classList.remove('hidden'); return; }
+    document.getElementById('modalMovimiento').classList.add('hidden');
+    cargarMovimientos();
+}
+
+async function cargarResumen() {
+    const anio = document.getElementById('resAnio').value;
+    const [cuentas, mensual] = await Promise.all([
+        fetch('/api/contabilidad/resumen?anio=' + anio).then(r=>r.json()),
+        fetch('/api/contabilidad/resumen/mensual?anio=' + anio).then(r=>r.json())
+    ]);
+    const fmt = v => Number(v).toLocaleString('es-AR', {style:'currency', currency:'ARS', maximumFractionDigits:0});
+
+    // Resumen por cuenta
+    const sec = document.getElementById('resumenAnual');
+    sec.innerHTML = '';
+    const ingresos = (cuentas||[]).filter(c=>c.tipo==='INGRESO');
+    const egresos  = (cuentas||[]).filter(c=>c.tipo==='EGRESO');
+    const mkCard = (titulo, items, color) => {
+        let rows = items.map(i => `<tr class="border-t"><td class="py-1 text-gray-700">${i.nombre_cuenta}</td><td class="py-1 text-right font-mono">${fmt(i.total)}</td></tr>`).join('');
+        const total = items.reduce((s,i) => s + Number(i.total), 0);
+        return `<div class="bg-white rounded-xl shadow p-5"><h4 class="font-semibold ${color} mb-3">${titulo}</h4><table class="w-full text-sm">${rows}</table><div class="border-t mt-2 pt-2 flex justify-between font-bold"><span>Total</span><span class="font-mono">${fmt(total)}</span></div></div>`;
+    };
+    sec.innerHTML = mkCard('Ingresos', ingresos, 'text-green-700') + mkCard('Egresos', egresos, 'text-red-600');
+
+    // Resumen mensual
+    const tbody = document.getElementById('tablaResumenMensual');
+    tbody.innerHTML = '';
+    (mensual||[]).forEach(r => {
+        const res = Number(r.total_ingresos) - Number(r.total_egresos);
+        tbody.innerHTML += `<tr class="hover:bg-gray-50">
+            <td class="px-4 py-2">${meses[r.mes - 1]||r.mes}</td>
+            <td class="px-4 py-2 text-right text-green-700 font-mono">${fmt(r.total_ingresos)}</td>
+            <td class="px-4 py-2 text-right text-red-600 font-mono">${fmt(r.total_egresos)}</td>
+            <td class="px-4 py-2 text-right font-mono font-bold ${res >= 0 ? 'text-blue-700' : 'text-yellow-600'}">${fmt(res)}</td>
+        </tr>`;
+    });
+}
+</script>
+</body>
+</html>

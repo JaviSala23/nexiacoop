@@ -7,73 +7,78 @@
 <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 min-h-screen flex">
-<!-- Sidebar -->
 <aside class="w-64 bg-blue-900 text-white flex flex-col min-h-screen fixed">
     <div class="p-6 border-b border-blue-700">
         <h1 class="text-2xl font-bold">NEXIA</h1>
-        <p class="text-blue-300 text-xs mt-1">Gestión de Socios</p>
+        <p class="text-blue-300 text-xs mt-1">Cooperadora Escolar</p>
     </div>
     <nav class="flex-1 p-4 space-y-1">
-        <a href="/dashboard" class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700 font-medium">🏠 Dashboard</a>
-        <a href="/socios"    class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">👥 Socios</a>
-        <a href="/cobradoras"class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">👩‍💼 Cobradoras</a>
-        <a href="/talones"   class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">🧾 Talones</a>
-        <a href="/pagos"     class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">💳 Pagos</a>
-        <a href="/padron"    class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">📋 Padrón</a>
-        <a href="/inventario" class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">🩼 Inventario</a>
-        <a href="/admin"     class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">⚙️ Admin</a>
+        <a href="/dashboard"    class="flex items-center gap-3 px-4 py-2 rounded-lg bg-blue-700 font-medium">&#127968; Dashboard</a>
+        <a href="/familias"     class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">&#128106; Familias</a>
+        <a href="/talones"      class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">&#129534; Talones</a>
+        <a href="/pagos"        class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">&#128179; Pagos</a>
+        <a href="/conceptos"    class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">&#128194; Conceptos</a>
+        <a href="/contabilidad" class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">&#128202; Contabilidad</a>
+        <a href="/admin"        class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">&#9881; Admin</a>
     </nav>
     <div class="p-4 border-t border-blue-700">
         <span id="userInfo" class="text-blue-300 text-sm"></span>
-        <button onclick="logout()" class="mt-2 w-full text-left text-sm text-red-300 hover:text-red-200">Cerrar sesión</button>
+        <button onclick="logout()" class="mt-2 w-full text-left text-sm text-red-300 hover:text-red-200">Cerrar sesion</button>
     </div>
 </aside>
-<!-- Content -->
 <main class="ml-64 flex-1 p-8">
     <h2 class="text-2xl font-bold text-blue-900 mb-6">Panel Principal</h2>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div class="bg-white rounded-xl shadow p-6 border-l-4 border-blue-500">
-            <p class="text-gray-500 text-sm">Total Socios Activos</p>
-            <p id="totalSocios" class="text-3xl font-bold text-blue-800 mt-2">-</p>
-        </div>
-        <div class="bg-white rounded-xl shadow p-6 border-l-4 border-yellow-500">
-            <p class="text-gray-500 text-sm">Socios Morosos</p>
-            <p id="totalMorosos" class="text-3xl font-bold text-yellow-700 mt-2">-</p>
+            <p class="text-gray-500 text-sm">Familias Activas</p>
+            <p id="totalFamilias" class="text-3xl font-bold text-blue-800 mt-2">-</p>
         </div>
         <div class="bg-white rounded-xl shadow p-6 border-l-4 border-green-500">
-            <p class="text-gray-500 text-sm">Cobradoras Activas</p>
-            <p id="totalCobradoras" class="text-3xl font-bold text-green-700 mt-2">-</p>
+            <p class="text-gray-500 text-sm">Alumnos Activos</p>
+            <p id="totalAlumnos" class="text-3xl font-bold text-green-700 mt-2">-</p>
+        </div>
+        <div class="bg-white rounded-xl shadow p-6 border-l-4 border-yellow-500">
+            <p class="text-gray-500 text-sm">Talones Pendientes</p>
+            <p id="talonPendientes" class="text-3xl font-bold text-yellow-700 mt-2">-</p>
+        </div>
+        <div class="bg-white rounded-xl shadow p-6 border-l-4 border-purple-500">
+            <p class="text-gray-500 text-sm">Talones Pagados (mes)</p>
+            <p id="talonPagados" class="text-3xl font-bold text-purple-700 mt-2">-</p>
         </div>
     </div>
     <div class="bg-white rounded-xl shadow p-6">
-        <h3 class="font-bold text-gray-700 mb-4">Accesos rápidos</h3>
+        <h3 class="font-bold text-gray-700 mb-4">Accesos rapidos</h3>
         <div class="flex flex-wrap gap-4">
-            <a href="/socios" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium">+ Nuevo socio</a>
-            <a href="/talones" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium">Generar talones</a>
-            <a href="/pagos" class="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 rounded-lg font-medium">Registrar pagos</a>
+            <a href="/familias" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium">+ Nueva familia</a>
+            <a href="/talones"  class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium">Generar talones</a>
+            <a href="/pagos"    class="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 rounded-lg font-medium">Registrar pagos</a>
+            <a href="/conceptos" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-medium">Configurar cuotas</a>
         </div>
     </div>
 </main>
 <script>
-async function logout() {
-    await fetch('/api/auth/logout', { method: 'POST' });
-    window.location.href = '/login';
-}
-async function loadStats() {
-    try {
-        const [socios, morosos, cobs] = await Promise.all([
-            fetch('/api/socios?estado=ACTIVO').then(r=>r.json()),
-            fetch('/api/morosos').then(r=>r.json()),
-            fetch('/api/cobradoras').then(r=>r.json())
+async function logout(){await fetch('/api/auth/logout',{method:'POST'});window.location.href='/login';}
+async function loadStats(){
+    try{
+        const ahora=new Date();
+        const mes=ahora.getMonth()+1;
+        const anio=ahora.getFullYear();
+        const [familias,talones]=await Promise.all([
+            fetch('/api/familias?estado=ACTIVA').then(r=>r.json()),
+            fetch('/api/talones?mes='+mes+'&anio='+anio).then(r=>r.json())
         ]);
-        document.getElementById('totalSocios').textContent = Array.isArray(socios) ? socios.length : '-';
-        document.getElementById('totalMorosos').textContent = Array.isArray(morosos) ? morosos.length : '-';
-        document.getElementById('totalCobradoras').textContent = Array.isArray(cobs) ? cobs.filter(c=>c.activa).length : '-';
-    } catch(e) { console.error(e); }
+        const fams=Array.isArray(familias)?familias:[];
+        const tals=Array.isArray(talones)?talones:[];
+        document.getElementById('totalFamilias').textContent=fams.length;
+        const totalAlumnos=fams.reduce((s,f)=>s+(Number(f.cantidad_alumnos)||0),0);
+        document.getElementById('totalAlumnos').textContent=totalAlumnos;
+        document.getElementById('talonPendientes').textContent=tals.filter(t=>t.estado==='PENDIENTE').length;
+        document.getElementById('talonPagados').textContent=tals.filter(t=>t.estado==='PAGADO').length;
+    }catch(e){console.error(e);}
 }
 fetch('/api/auth/me').then(r=>r.json()).then(u=>{
-    if (!u.id) { window.location.href='/login'; return; }
-    document.getElementById('userInfo').textContent = u.nombre + ' (' + u.rol + ')';
+    if(!u.id){window.location.href='/login';return;}
+    document.getElementById('userInfo').textContent=u.nombre+' ('+u.rol+')';
     loadStats();
 });
 </script>
