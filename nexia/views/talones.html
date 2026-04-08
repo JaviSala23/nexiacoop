@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexia - Talones</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex">
+<aside class="w-64 bg-blue-900 text-white flex flex-col min-h-screen fixed">
+    <div class="p-6 border-b border-blue-700"><h1 class="text-2xl font-bold">NEXIA</h1><p class="text-blue-300 text-xs">Gestión de Socios</p></div>
+    <nav class="flex-1 p-4 space-y-1">
+        <a href="/dashboard"  class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">🏠 Dashboard</a>
+        <a href="/socios"     class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">👥 Socios</a>
+        <a href="/cobradoras" class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">👩‍💼 Cobradoras</a>
+        <a href="/talones"    class="flex items-center gap-3 px-4 py-2 rounded-lg bg-blue-700 font-medium">🧾 Talones</a>
+        <a href="/pagos"      class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">💳 Pagos</a>
+        <a href="/padron"     class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">📋 Padrón</a>
+        <a href="/inventario" class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">🩼 Inventario</a>
+        <a href="/admin"      class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">⚙️ Admin</a>
+    </nav>
+    <div class="p-4 border-t border-blue-700"><button onclick="logout()" class="text-sm text-red-300 hover:text-red-200">Cerrar sesión</button></div>
+</aside>
+<main class="ml-64 flex-1 p-8">
+    <h2 class="text-2xl font-bold text-blue-900 mb-6">Talones</h2>
+    <!-- Generar -->
+    <div class="bg-white rounded-xl shadow p-6 mb-6">
+        <h3 class="font-semibold text-blue-800 mb-4">Generar talones mensuales</h3>
+        <div class="flex gap-4 items-end flex-wrap">
+            <div><label class="text-sm text-gray-600">Mes</label>
+                <select id="genMes" class="block border rounded px-3 py-2 mt-1">
+                    <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
+                    <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
+                    <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
+                    <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+                </select></div>
+            <div><label class="text-sm text-gray-600">Año</label>
+                <input id="genAnio" type="number" value="2025" class="block border rounded px-3 py-2 mt-1 w-24"></div>
+            <button onclick="generarTalones()" class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700">Generar</button>
+        </div>
+        <!-- Selector de socios específicos -->
+        <div class="mt-4 pt-3 border-t">
+            <button onclick="toggleSocioSel()" id="btnToggleSel" class="text-sm text-blue-600 hover:underline flex items-center gap-1">
+                <span id="iconoSel">▶</span> Socios específicos (opcional)
+            </button>
+            <div id="socioSel" class="hidden mt-3">
+                <div class="flex gap-2 mb-2 items-center">
+                    <input id="busqSocio" type="text" placeholder="Buscar por nombre o nú mero..."
+                           class="border rounded px-2 py-1 text-sm flex-1" oninput="filtrarListaSocios()">
+                    <button onclick="selAllSocios(true)" class="text-xs text-blue-600 hover:underline">Todos</button>
+                    <button onclick="selAllSocios(false)" class="text-xs text-red-500 hover:underline">Ninguno</button>
+                </div>
+                <div id="listaSocios" class="border rounded max-h-44 overflow-y-auto p-2 space-y-1 text-sm bg-gray-50"></div>
+                <p id="infoSel" class="text-xs text-gray-400 mt-1">Sin selección = genera para todos los activos</p>
+            </div>
+        </div>
+        <div id="genMsg" class="mt-3 text-sm hidden"></div>
+    </div>
+    <!-- Filtros -->
+    <div class="bg-white rounded-xl shadow p-4 mb-6 flex gap-4 flex-wrap items-end">
+        <select id="filtMes" class="border rounded px-3 py-2 text-sm" onchange="cargar()">
+            <option value="">Todos los meses</option>
+            <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
+            <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
+            <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
+            <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+        </select>
+        <input id="filtAnio" type="number" placeholder="Año" class="border rounded px-3 py-2 text-sm w-24" onchange="cargar()">
+        <select id="filtCobradora" class="border rounded px-3 py-2 text-sm" onchange="cargar()"><option value="">Todas las cobradoras</option></select>
+        <button onclick="imprimirLote()" class="ml-auto bg-blue-700 text-white px-5 py-2 rounded-lg hover:bg-blue-800 text-sm flex items-center gap-2" title="Imprime los talones del filtro actual, agrupados por cobradora">
+            🖨️ Imprimir lote (por cobradora)
+        </button>
+    </div>
+    <!-- Tabla -->
+    <div class="bg-white rounded-xl shadow overflow-hidden">
+        <table class="w-full text-sm">
+            <thead class="bg-blue-50 text-blue-800 font-semibold">
+                <tr>
+                    <th class="px-4 py-3 text-left">Código de barra</th>
+                    <th class="px-4 py-3 text-left">Socio</th>
+                    <th class="px-4 py-3 text-left">Mes/Año</th>
+                    <th class="px-4 py-3 text-left">Tipo</th>
+                    <th class="px-4 py-3 text-left">Monto</th>
+                    <th class="px-4 py-3 text-left">Estado</th>
+                    <th class="px-4 py-3 text-left">Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="tablaTalones" class="divide-y divide-gray-100"></tbody>
+        </table>
+    </div>
+</main>
+<script>
+const ESTADOS_TALON = {
+    GENERADO: 'bg-yellow-100 text-yellow-700',
+    PENDIENTE:'bg-yellow-100 text-yellow-700',
+    PAGADO:   'bg-green-100 text-green-700',
+    ANULADO:  'bg-gray-100 text-gray-500'
+};
+const MESES = ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const MESES_FULL = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+let talonesCargados = [];
+let paramsSistema = {};
+let todosSociosActivos = [];
+
+async function logout() { await fetch('/api/auth/logout',{method:'POST'}); window.location.href='/login'; }
+async function init() {
+    const [rc, rp, rs] = await Promise.all([
+        fetch('/api/cobradoras'),
+        fetch('/api/admin/parametros'),
+        fetch('/api/socios?estado=ACTIVO')
+    ]);
+    const cobs = await rc.json();
+    paramsSistema = await rp.json();
+    todosSociosActivos = (await rs.json()).sort((a,b) => a.numero_socio - b.numero_socio);
+    document.getElementById('filtCobradora').innerHTML = '<option value="">Todas</option>' +
+        cobs.filter(c=>c.activa).map(c=>`<option value="${c.id_cobradora}">${c.nombre}</option>`).join('');
+    const now = new Date();
+    document.getElementById('genMes').value = now.getMonth()+1;
+    document.getElementById('genAnio').value = now.getFullYear();
+    renderListaSocios(todosSociosActivos);
+    cargar();
+}
+
+function toggleSocioSel() {
+    const el = document.getElementById('socioSel');
+    const ic = document.getElementById('iconoSel');
+    el.classList.toggle('hidden');
+    ic.textContent = el.classList.contains('hidden') ? '▶' : '▼';
+}
+function renderListaSocios(lista) {
+    document.getElementById('listaSocios').innerHTML = lista.map(s => `
+        <label class="flex items-center gap-2 hover:bg-white rounded px-1 py-0.5 cursor-pointer">
+            <input type="checkbox" class="socio-check" value="${s.id_socio}">
+            <span class="font-mono text-blue-700 text-xs w-10">#${s.numero_socio}</span>
+            <span class="text-gray-800">${s.nombre_completo}</span>
+        </label>`).join('');
+}
+function filtrarListaSocios() {
+    const q = document.getElementById('busqSocio').value.toLowerCase();
+    const filtrados = todosSociosActivos.filter(s =>
+        s.nombre_completo.toLowerCase().includes(q) ||
+        String(s.numero_socio).includes(q));
+    renderListaSocios(filtrados);
+}
+function selAllSocios(val) {
+    document.querySelectorAll('.socio-check').forEach(cb => cb.checked = val);
+    actualizarInfoSel();
+}
+function actualizarInfoSel() {
+    const sel = document.querySelectorAll('.socio-check:checked').length;
+    const info = document.getElementById('infoSel');
+    info.textContent = sel === 0 ? 'Sin selección = genera para todos los activos' : `${sel} socio(s) seleccionado(s)`;
+}
+document.addEventListener('change', e => { if (e.target.classList.contains('socio-check')) actualizarInfoSel(); });
+function getSociosSeleccionados() {
+    return [...document.querySelectorAll('.socio-check:checked')].map(cb => parseInt(cb.value));
+}
+async function cargar() {
+    const mes = document.getElementById('filtMes').value;
+    const anio = document.getElementById('filtAnio').value;
+    const cob  = document.getElementById('filtCobradora').value;
+    const p = new URLSearchParams();
+    if (mes)  p.set('mes', mes);
+    if (anio) p.set('anio', anio);
+    if (cob)  p.set('cobradora', cob);
+    const r = await fetch('/api/talones?'+p); const lista = await r.json();
+    talonesCargados = lista;
+    const tbody = document.getElementById('tablaTalones');
+    tbody.innerHTML = lista.map(t=>`
+        <tr class="hover:bg-gray-50">
+            <td class="px-4 py-3 font-mono text-xs">${t.codigo_barra}</td>
+            <td class="px-4 py-3">${t.nombre_socio||t.id_socio}</td>
+            <td class="px-4 py-3">${MESES[t.mes]} ${t.anio}</td>
+            <td class="px-4 py-3 text-xs">${t.tipo==='S'?'Simple':'Con resp.'}</td>
+            <td class="px-4 py-3">$${(t.monto||0).toFixed(2)}</td>
+            <td class="px-4 py-3"><span class="px-2 py-1 rounded-full text-xs font-medium ${ESTADOS_TALON[t.estado]||''}">${t.estado}</span></td>
+            <td class="px-4 py-3 flex gap-3 items-center">
+                <button onclick="imprimirTalon(talonesCargados[${lista.indexOf(t)}])" class="text-blue-600 hover:text-blue-800 text-xs" title="Imprimir talón">🖨️</button>
+                ${(t.estado==='GENERADO'||t.estado==='PENDIENTE')?`<button onclick="anular(${t.id_talon})" class="text-red-500 hover:underline text-xs">Anular</button>`:''}
+            </td>
+        </tr>`).join('') || '<tr><td colspan="7" class="text-center py-8 text-gray-400">No hay talones</td></tr>';
+}
+async function generarTalones() {
+    const mes = parseInt(document.getElementById('genMes').value);
+    const anio = parseInt(document.getElementById('genAnio').value);
+    const sociosSelec = getSociosSeleccionados();
+    const msg = document.getElementById('genMsg');
+    msg.className = 'mt-3 text-sm text-blue-600'; msg.textContent = 'Generando...'; msg.classList.remove('hidden');
+    try {
+        const body = { mes, anio };
+        if (sociosSelec.length > 0) body.socios = sociosSelec;
+        const r = await fetch('/api/talones/generar', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+        const d = await r.json();
+        if (r.ok) { msg.className='mt-3 text-sm text-green-600'; msg.textContent=`✓ ${d.generados||d.cantidad||0} talones generados para ${MESES[mes]} ${anio}.`; cargar(); }
+        else { msg.className='mt-3 text-sm text-red-600'; msg.textContent = d.error||'Error al generar talones'; }
+    } catch(e) {
+        msg.className='mt-3 text-sm text-red-600'; msg.textContent = 'Error de conexión con el servidor.';
+    }
+}
+async function anular(id) {
+    if (!confirm('¿Anular este talón?')) return;
+    const r = await fetch('/api/talones/'+id+'/anular', {method:'POST'});
+    if (r.ok) cargar(); else { const d=await r.json(); alert(d.error||'Error'); }
+}
+
+function imprimirTalon(t) { abrirVentanaImpresion([t], false); }
+function imprimirLote() {
+    if (!talonesCargados.length) { alert('No hay talones cargados.'); return; }
+    // Ordenar por nombre de cobradora alfabéticamente
+    const ordenados = [...talonesCargados].sort((a, b) => {
+        const ca = (a.nombre_cobradora || '').toLowerCase();
+        const cb = (b.nombre_cobradora || '').toLowerCase();
+        return ca < cb ? -1 : ca > cb ? 1 : 0;
+    });
+    abrirVentanaImpresion(ordenados, true);
+}
+
+function abrirVentanaImpresion(lista, porCobradora = false) {
+    const p = paramsSistema;
+    const orgNombre = p.nombre_asociacion || 'NEXIA';
+    const orgLogo   = p.logo_url || '';
+    const logoTalonHtml = orgLogo ? `<div class="talon-logo"><img src="${esc(orgLogo)}" alt=""></div>` : '';
+    const win = window.open('', '_blank', 'width=900,height=700');
+    let cobradoraActual = null;
+    const talonesHtml = lista.map((t, i) => {
+        let header = '';
+        if (porCobradora && t.nombre_cobradora !== cobradoraActual) {
+            cobradoraActual = t.nombre_cobradora;
+            header = `<div class="cobradora-header">👩‍💼 ${esc(cobradoraActual || 'Sin cobradora')}</div>`;
+        }
+        return header + `
+        <div class="talon" id="wrap${i}">
+            <div class="talon-inner">
+                <div class="talon-lado">
+                    ${logoTalonHtml}
+                    <div class="talon-header">
+                        <span class="org-name">${esc(orgNombre)}</span>
+                        <span class="tipo-badge">${t.tipo==='SIMPLE'?'SIMPLE':'CON RESP.'}</span>
+                    </div>
+                    <div class="talon-periodo">CUOTA ${MESES_FULL[t.mes]?.toUpperCase()||''} ${t.anio}</div>
+                    <div class="dato"><span class="lbl">Socio:</span> ${esc(t.nombre_socio||String(t.id_socio))}</div>
+                    ${t.dni_socio ? `<div class="dato"><span class="lbl">DNI:</span> ${esc(t.dni_socio)}</div>` : ''}
+                    ${t.direccion_socio ? `<div class="dato"><span class="lbl">Dirección:</span> ${esc(t.direccion_socio)}${t.localidad_socio ? ', '+esc(t.localidad_socio) : ''}${t.provincia_socio ? ' ('+esc(t.provincia_socio)+')' : ''}</div>` : ''}
+                    ${t.telefono_socio ? `<div class="dato"><span class="lbl">Tel:</span> ${esc(t.telefono_socio)}</div>` : ''}
+                    ${t.nombre_anexo ? `<div class="dato seccion-anexo"><span class="lbl anexo-lbl">Anexo:</span> ${esc(t.nombre_anexo)}</div>` : ''}
+                    ${t.nombre_anexo && t.numero_socio_anexo ? `<div class="dato"><span class="lbl anexo-lbl">Nº socio anexo:</span> ${t.numero_socio_anexo}</div>` : ''}
+                    ${t.nombre_anexo && t.dni_anexo ? `<div class="dato"><span class="lbl anexo-lbl">DNI anexo:</span> ${esc(t.dni_anexo)}</div>` : ''}
+                    ${t.nombre_anexo && t.telefono_anexo ? `<div class="dato"><span class="lbl anexo-lbl">Tel. anexo:</span> ${esc(t.telefono_anexo)}</div>` : ''}
+                    ${t.nombre_responsable_socio ? `<div class="dato"><span class="lbl">Responsable:</span> ${esc(t.nombre_responsable_socio)}</div>` : ''}
+                    <div class="dato"><span class="lbl">Cobradora:</span> ${esc(t.nombre_cobradora||'-')}</div>
+                    <div class="dato dato-monto"><span class="lbl">Importe:</span> <strong>$${(t.monto||0).toLocaleString('es-AR',{minimumFractionDigits:2})}</strong></div>
+                    <div class="talon-barcode">
+                        <svg id="bc${i}"></svg>
+                        <div class="barcode-num">${esc(t.codigo_barra)}</div>
+                    </div>
+                </div>
+                <div class="tear-line">✂</div>
+                <div class="talon-lado talon-copia">
+                    ${logoTalonHtml}
+                    <div class="copia-label">COPIA ENTIDAD</div>
+                    <div class="talon-periodo">CUOTA ${MESES_FULL[t.mes]?.toUpperCase()||''} ${t.anio}</div>
+                    <div class="dato"><span class="lbl">Socio:</span> ${esc(t.nombre_socio||String(t.id_socio))}</div>
+                    ${t.dni_socio ? `<div class="dato"><span class="lbl">DNI:</span> ${esc(t.dni_socio)}</div>` : ''}
+                    ${t.direccion_socio ? `<div class="dato"><span class="lbl">Dirección:</span> ${esc(t.direccion_socio)}${t.localidad_socio ? ', '+esc(t.localidad_socio) : ''}${t.provincia_socio ? ' ('+esc(t.provincia_socio)+')' : ''}</div>` : ''}
+                    ${t.telefono_socio ? `<div class="dato"><span class="lbl">Tel:</span> ${esc(t.telefono_socio)}</div>` : ''}
+                    ${t.nombre_anexo ? `<div class="dato seccion-anexo"><span class="lbl anexo-lbl">Anexo:</span> ${esc(t.nombre_anexo)}</div>` : ''}
+                    ${t.nombre_anexo && t.numero_socio_anexo ? `<div class="dato"><span class="lbl anexo-lbl">Nº socio anexo:</span> ${t.numero_socio_anexo}</div>` : ''}
+                    ${t.nombre_anexo && t.dni_anexo ? `<div class="dato"><span class="lbl anexo-lbl">DNI anexo:</span> ${esc(t.dni_anexo)}</div>` : ''}
+                    ${t.nombre_anexo && t.telefono_anexo ? `<div class="dato"><span class="lbl anexo-lbl">Tel. anexo:</span> ${esc(t.telefono_anexo)}</div>` : ''}
+                    ${t.nombre_responsable_socio ? `<div class="dato"><span class="lbl">Responsable:</span> ${esc(t.nombre_responsable_socio)}</div>` : ''}
+                    <div class="dato"><span class="lbl">Cobradora:</span> ${esc(t.nombre_cobradora||'-')}</div>
+                    <div class="dato dato-monto"><span class="lbl">Importe:</span> <strong>$${(t.monto||0).toLocaleString('es-AR',{minimumFractionDigits:2})}</strong></div>
+                    <div class="talon-barcode">
+                        <svg id="bc${i}b"></svg>
+                        <div class="barcode-num">${esc(t.codigo_barra)}</div>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+    }).join('\n');
+
+    win.document.write(`<!DOCTYPE html>
+<html lang="es"><head>
+<meta charset="UTF-8">
+<title>Talones - ${esc(orgNombre)}</title>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"><\/script>
+<style>
+    @page { size: A4; margin: 10mm 12mm; }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: Arial, Helvetica, sans-serif; background:#fff; }
+    .pagina { display:flex; flex-direction:column; gap:4mm; }
+    .talon { border:1px solid #ccc; border-radius:4px; page-break-inside:avoid; }
+    .talon-inner { display:flex; align-items:stretch; }
+    .talon-lado { flex:1; padding:4mm 5mm; position:relative; overflow:hidden; }
+    .talon-logo { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); opacity:0.08; pointer-events:none; z-index:0; width:70%; display:flex; align-items:center; justify-content:center; }
+    .talon-logo img { max-width:100%; max-height:28mm; object-fit:contain; }
+    .talon-copia { background:#f7f9ff; }
+    .tear-line { width:8px; display:flex; align-items:center; justify-content:center; font-size:14px; color:#aaa; border-left:1px dashed #bbb; border-right:1px dashed #bbb; }
+    .talon-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:2mm; }
+    .org-name { font-size:14pt; font-weight:900; color:#003087; letter-spacing:1px; }
+    .tipo-badge { font-size:6.5pt; background:#003087; color:#fff; padding:1px 5px; border-radius:3px; }
+    .copia-label { font-size:7pt; text-transform:uppercase; color:#888; letter-spacing:1px; margin-bottom:2mm; }
+    .talon-periodo { font-size:10pt; font-weight:bold; color:#333; margin-bottom:2mm; }
+    .dato { font-size:8.5pt; color:#333; margin-bottom:1mm; }
+    .lbl { color:#666; min-width:18mm; display:inline-block; }
+    .dato-monto { margin-top:2mm; font-size:10pt; }
+    .dato-monto strong { color:#003087; font-size:13pt; }
+    .talon-barcode { margin-top:3mm; padding-top:2mm; border-top:1px dashed #ddd; text-align:center; }
+    .talon-barcode svg { max-width:100%; height:12mm; }
+    .barcode-num { font-family:monospace; font-size:7pt; letter-spacing:0.5px; color:#444; margin-top:1mm; }
+    .cobradora-header { background:#003087; color:#fff; font-size:11pt; font-weight:bold; padding:3mm 5mm; margin-top:4mm; margin-bottom:2mm; border-radius:4px; page-break-before:auto; page-break-inside:avoid; }
+    .cobradora-header:first-child { margin-top:0; }
+    .seccion-anexo { margin-top:2mm; padding-top:1.5mm; border-top:1px dotted #bbb; }
+    .anexo-lbl { color:#8b5e00 !important; }
+    @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
+</style>
+</head><body>
+<div class="pagina">${talonesHtml}</div>
+<script>
+window.addEventListener('load', function() {
+    var items = ${JSON.stringify(lista.map(t=>t.codigo_barra))};
+    items.forEach(function(cod, i) {
+        try {
+            JsBarcode('#bc'+i, cod, {format:'CODE128',lineColor:'#000',width:1.5,height:40,displayValue:false});
+            JsBarcode('#bc'+i+'b', cod, {format:'CODE128',lineColor:'#000',width:1.5,height:40,displayValue:false});
+        } catch(e) {}
+    });
+    setTimeout(function() { window.print(); }, 400);
+});
+<\/script>
+</body></html>`);
+    win.document.close();
+}
+
+function esc(s) {
+    const d = document.createElement('div');
+    d.appendChild(document.createTextNode(String(s)));
+    return d.innerHTML;
+}
+
+init();
+</script>
+</body>
+</html>

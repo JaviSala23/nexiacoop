@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexia - Padrón</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex">
+<aside class="w-64 bg-blue-900 text-white flex flex-col min-h-screen fixed">
+    <div class="p-6 border-b border-blue-700"><h1 class="text-2xl font-bold">NEXIA</h1><p class="text-blue-300 text-xs">Gestión de Socios</p></div>
+    <nav class="flex-1 p-4 space-y-1">
+        <a href="/dashboard"  class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">🏠 Dashboard</a>
+        <a href="/socios"     class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">👥 Socios</a>
+        <a href="/cobradoras" class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">👩‍💼 Cobradoras</a>
+        <a href="/talones"    class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">🧾 Talones</a>
+        <a href="/pagos"      class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">💳 Pagos</a>
+        <a href="/padron"     class="flex items-center gap-3 px-4 py-2 rounded-lg bg-blue-700 font-medium">📋 Padrón</a>
+        <a href="/inventario" class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">🩼 Inventario</a>
+        <a href="/admin"      class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">⚙️ Admin</a>
+    </nav>
+    <div class="p-4 border-t border-blue-700"><button onclick="logout()" class="text-sm text-red-300 hover:text-red-200">Cerrar sesión</button></div>
+</aside>
+<main class="ml-64 flex-1 p-8">
+    <h2 class="text-2xl font-bold text-blue-900 mb-6">Padrón de Socios</h2>
+
+    <!-- Opciones de generación -->
+    <div class="bg-white rounded-xl shadow p-6 mb-6">
+        <h3 class="font-semibold text-blue-800 mb-4">Opciones del padrón</h3>
+        <div class="flex flex-wrap gap-6 items-end">
+            <div>
+                <label class="text-sm text-gray-600 block mb-1">Estado</label>
+                <select id="filtEstado" class="border rounded px-3 py-2 text-sm">
+                    <option value="ACTIVO" selected>Activos</option>
+                    <option value="INACTIVO">Inactivos</option>
+                    <option value="">Todos</option>
+                </select>
+            </div>
+            <div>
+                <label class="text-sm text-gray-600 block mb-1">Cobradora</label>
+                <select id="filtCobradora" class="border rounded px-3 py-2 text-sm">
+                    <option value="">Todas</option>
+                </select>
+            </div>
+            <div>
+                <label class="text-sm text-gray-600 block mb-1">Tipo de listado</label>
+                <select id="filtTipo" class="border rounded px-3 py-2 text-sm">
+                    <option value="general">General (alfabético)</option>
+                    <option value="cobradora">Por cobradora (página por cobradora)</option>
+                    <option value="localidad">Por localidad</option>
+                </select>
+            </div>
+            <button onclick="cargar()" class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 text-sm">
+                Actualizar vista
+            </button>
+            <button onclick="imprimir()" class="bg-green-600 text-white px-5 py-2 rounded-lg hover:bg-green-700 text-sm flex items-center gap-2">
+                🖨️ Imprimir / PDF
+            </button>
+        </div>
+    </div>
+
+    <!-- Resumen -->
+    <div id="resumen" class="mb-4 text-sm text-gray-500"></div>
+
+    <!-- Preview tabla -->
+    <div class="bg-white rounded-xl shadow overflow-hidden">
+        <table class="w-full text-sm">
+            <thead class="bg-blue-50 text-blue-800 font-semibold">
+                <tr>
+                    <th class="px-4 py-3 text-left w-12">N°</th>
+                    <th class="px-4 py-3 text-left">Apellido y Nombre</th>
+                    <th class="px-4 py-3 text-left">DNI</th>
+                    <th class="px-4 py-3 text-left">Dirección</th>
+                    <th class="px-4 py-3 text-left">Teléfono</th>
+                    <th class="px-4 py-3 text-left">Localidad</th>
+                </tr>
+            </thead>
+            <tbody id="tablaPreview" class="divide-y divide-gray-100 text-xs"></tbody>
+        </table>
+    </div>
+</main>
+
+<script>
+let sociosCargados = [];
+let parametrosSistema = {};
+const MESES_FULL=['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+async function logout() { await fetch('/api/auth/logout',{method:'POST'}); window.location.href='/login'; }
+
+async function init() {
+    const [rc, rp] = await Promise.all([fetch('/api/cobradoras'), fetch('/api/admin/parametros')]);
+    const cobs = await rc.json();
+    parametrosSistema = await rp.json();
+    document.getElementById('filtCobradora').innerHTML =
+        '<option value="">Todas</option>' +
+        cobs.filter(c=>c.activa).map(c=>`<option value="${c.id_cobradora}">${c.nombre}</option>`).join('');
+    cargar();
+}
+
+async function cargar() {
+    const estado = document.getElementById('filtEstado').value;
+    const cob    = document.getElementById('filtCobradora').value;
+    const p = new URLSearchParams();
+    if (estado) p.set('estado', estado);
+    if (cob)    p.set('cobradora', cob);
+    const r = await fetch('/api/socios?' + p);
+    sociosCargados = await r.json();
+    renderPreview();
+}
+
+function renderPreview() {
+    const tbody = document.getElementById('tablaPreview');
+    const tipo  = document.getElementById('filtTipo').value;
+    const lista = getSorted(tipo);
+    document.getElementById('resumen').textContent = `Total: ${lista.length} socio(s)`;
+    tbody.innerHTML = lista.map((s,i)=>`
+        <tr class="hover:bg-gray-50">
+            <td class="px-4 py-2 text-gray-400">${s.numero_socio||i+1}</td>
+            <td class="px-4 py-2 font-medium">${esc(s.nombre_completo)}</td>
+            <td class="px-4 py-2">${esc(s.dni)}</td>
+            <td class="px-4 py-2">${esc(s.direccion||'-')}</td>
+            <td class="px-4 py-2">${esc(s.telefono||'-')}</td>
+            <td class="px-4 py-2">${esc(s.nombre_localidad||'-')}${s.nombre_provincia?', '+esc(s.nombre_provincia):''}</td>
+        </tr>`).join('') || '<tr><td colspan="6" class="text-center py-8 text-gray-400">Sin resultados</td></tr>';
+}
+
+function getSorted(tipo) {
+    const lista = [...sociosCargados];
+    if (tipo === 'cobradora') lista.sort((a,b) => (a.nombre_cobradora||'').localeCompare(b.nombre_cobradora||'') || (a.nombre_completo||'').localeCompare(b.nombre_completo||''));
+    else if (tipo === 'localidad') lista.sort((a,b) => (a.nombre_provincia||'').localeCompare(b.nombre_provincia||'') || (a.nombre_localidad||'').localeCompare(b.nombre_localidad||'') || (a.nombre_completo||'').localeCompare(b.nombre_completo||''));
+    else lista.sort((a,b) => (a.nombre_completo||'').localeCompare(b.nombre_completo||''));
+    return lista;
+}
+
+function esc(s) {
+    const d = document.createElement('div');
+    d.appendChild(document.createTextNode(String(s||'')));
+    return d.innerHTML;
+}
+
+function imprimir() {
+    if (!sociosCargados.length) { alert('No hay socios cargados.'); return; }
+    const tipo = document.getElementById('filtTipo').value;
+    const estado = document.getElementById('filtEstado').value;
+    const cobSel = document.getElementById('filtCobradora');
+    const cobNombre = cobSel.options[cobSel.selectedIndex].text;
+    const lista = getSorted(tipo);
+    const p = parametrosSistema;
+    const asocNombre = p.nombre_asociacion || 'NEXIA';
+    const asocDatos  = [p.domicilio, p.localidad, p.provincia].filter(Boolean).join(' · ');
+    const asocTel    = p.telefono ? `Tel: ${p.telefono}` : '';
+    const asocEmail  = p.email || '';
+    const asocLogo   = p.logo_url || '';
+    const footerTxt  = [asocDatos, asocTel].filter(Boolean).join('  |  ');
+
+    const logoHtml  = asocLogo ? `<img src="${escHtml(asocLogo)}" class="org-logo" alt="Logo">` : '';
+    const wmHtml    = asocLogo ? `<div class="watermark"><img src="${escHtml(asocLogo)}" alt=""></div>` : '';
+    const subLine1  = footerTxt ? `<div class="org-sub">${escHtml(footerTxt)}</div>` : '';
+    const subLine2  = asocEmail  ? `<div class="org-sub">${escHtml(asocEmail)}</div>`  : '';
+
+    const fecha = new Date().toLocaleDateString('es-AR', {day:'2-digit', month:'2-digit', year:'numeric'});
+
+    let cuerpoHtml = '';
+    if (tipo === 'cobradora') {
+        // Agrupar por cobradora
+        const grupos = {};
+        lista.forEach(s => {
+            const key = s.nombre_cobradora || 'Sin cobradora';
+            if (!grupos[key]) grupos[key] = [];
+            grupos[key].push(s);
+        });
+        cuerpoHtml = Object.keys(grupos).map((cob, gi) => `
+            <div class="grupo${gi > 0 ? ' nueva-pagina' : ''}">
+                <div class="grupo-header">
+                    <span class="grupo-titulo">Cobradora: ${escHtml(cob)}</span>
+                    <span class="grupo-total">${grupos[cob].length} socio(s)</span>
+                </div>
+                ${tablaSocios(grupos[cob])}
+            </div>`).join('');
+    } else if (tipo === 'localidad') {
+        const grupos = {};
+        lista.forEach(s => {
+            const key = [s.nombre_provincia||'Sin provincia', s.nombre_localidad||'Sin localidad'].join(' / ');
+            if (!grupos[key]) grupos[key] = [];
+            grupos[key].push(s);
+        });
+        cuerpoHtml = Object.keys(grupos).map((loc, gi) => `
+            <div class="grupo${gi > 0 ? ' nueva-pagina' : ''}">
+                <div class="grupo-header">
+                    <span class="grupo-titulo">${escHtml(loc)}</span>
+                    <span class="grupo-total">${grupos[loc].length} socio(s)</span>
+                </div>
+                ${tablaSocios(grupos[loc])}
+            </div>`).join('');
+    } else {
+        cuerpoHtml = tablaSocios(lista);
+    }
+
+    const filtroDesc = [
+        estado ? `Estado: ${estado}` : 'Todos los estados',
+        cobSel.value ? `Cobradora: ${cobNombre}` : 'Todas las cobradoras',
+        tipo === 'cobradora' ? 'Agrupado por cobradora' : tipo === 'localidad' ? 'Agrupado por localidad' : 'Listado general'
+    ].join(' · ');
+
+    const win = window.open('', '_blank', 'width=1000,height=750');
+    win.document.write(`<!DOCTYPE html>
+<html lang="es"><head>
+<meta charset="UTF-8">
+<title>Padrón de Socios - NEXIA</title>
+<style>
+    @page { size: A4 landscape; margin: 10mm 12mm; }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: Arial, Helvetica, sans-serif; font-size: 8.5pt; color: #222; background:#fff; }
+    .doc-header { display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid #003087; padding-bottom:4mm; margin-bottom:5mm; }
+    .org-block  { display:flex; align-items:center; gap:4mm; }
+    .org-logo   { max-height:22mm; max-width:38mm; object-fit:contain; }
+    .org-info   { display:flex; flex-direction:column; gap:0.5mm; }
+    .org-name { font-size:18pt; font-weight:900; color:#003087; letter-spacing:1px; }
+    .org-sub  { font-size:8pt; color:#555; margin-top:1mm; }
+    .doc-meta { text-align:right; font-size:7.5pt; color:#555; line-height:1.6; }
+    .doc-title { font-size:12pt; font-weight:bold; color:#003087; }
+    .filtros  { font-size:7pt; color:#888; margin-bottom:4mm; }
+    table { width:100%; border-collapse:collapse; margin-top:2mm; }
+    thead th { background:#003087; color:#fff; padding:2mm 2.5mm; text-align:left; font-size:7.5pt; font-weight:bold; }
+    tbody tr:nth-child(even) { background:#f0f4ff; }
+    tbody td { padding:1.8mm 2.5mm; border-bottom:1px solid #e0e8f0; vertical-align:top; }
+    .num  { color:#888; width:8mm; }
+    .nombre { font-weight:600; }
+    .resp { color:#666; font-style:italic; }
+    .grupo { margin-bottom:6mm; }
+    .grupo-header { display:flex; justify-content:space-between; align-items:center; background:#e8eef8; border-left:4px solid #003087; padding:2mm 3mm; margin-bottom:1mm; }
+    .grupo-titulo { font-weight:bold; color:#003087; font-size:9pt; }
+    .grupo-total  { font-size:7.5pt; color:#555; }
+    .nueva-pagina { page-break-before: always; }
+    .doc-footer { margin-top:5mm; padding-top:3mm; border-top:1px solid #ccc; display:flex; justify-content:space-between; font-size:7pt; color:#888; }
+    .footer-brand { font-style:italic; }
+    .watermark { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); opacity:0.07; z-index:0; pointer-events:none; }
+    .watermark img { max-width:180mm; max-height:180mm; object-fit:contain; }
+    @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
+</style>
+</head><body>
+${wmHtml}
+<div class="doc-header">
+    <div class="org-block">
+        ${logoHtml}
+        <div class="org-info">
+            <div class="org-name">${escHtml(asocNombre)}</div>
+            ${subLine1}
+            ${subLine2}
+        </div>
+    </div>
+    <div class="doc-meta">
+        <div class="doc-title">PADRÓN DE SOCIOS</div>
+        <div>Fecha de emisión: ${fecha}</div>
+        <div>Total: ${lista.length} socio(s)</div>
+    </div>
+</div>
+<div class="filtros">${escHtml(filtroDesc)}</div>
+${cuerpoHtml}
+<div class="doc-footer">
+    <span>Nexia &bull; <span class="footer-brand">by MantisTec</span> &bull; mantistec.com.ar</span>
+    <span>Padrón emitido el ${fecha}</span>
+</div>
+<script>
+function escHtml(s) { var d=document.createElement('div'); d.appendChild(document.createTextNode(s)); return d.innerHTML; }
+window.addEventListener('load', function() { setTimeout(function(){ window.print(); }, 300); });
+<\/script>
+</body></html>`);
+    win.document.close();
+}
+
+function tablaSocios(lista) {
+    return `<table>
+        <thead><tr>
+            <th class="num">N° Socio</th>
+            <th>Apellido y Nombre</th>
+            <th>DNI</th>
+            <th>Dirección</th>
+            <th>Teléfono</th>
+            <th>Localidad</th>
+        </tr></thead>
+        <tbody>${lista.map(s=>`
+            <tr>
+                <td class="num">${s.numero_socio||''}</td>
+                <td class="nombre">${escHtml(s.nombre_completo||'')}</td>
+                <td>${escHtml(s.dni||'')}</td>
+                <td>${escHtml(s.direccion||'')}</td>
+                <td>${escHtml(s.telefono||'')}</td>
+                <td>${escHtml([s.nombre_localidad, s.nombre_provincia].filter(Boolean).join(', ')||'-')}</td>
+            </tr>`).join('')}
+        </tbody>
+    </table>`;
+}
+
+function escHtml(s) {
+    const d = document.createElement('div');
+    d.appendChild(document.createTextNode(String(s||'')));
+    return d.innerHTML;
+}
+
+init();
+</script>
+</body>
+</html>

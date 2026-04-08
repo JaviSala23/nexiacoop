@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexia - Socios</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex">
+<aside class="w-64 bg-blue-900 text-white flex flex-col min-h-screen fixed">
+    <div class="p-6 border-b border-blue-700"><h1 class="text-2xl font-bold">NEXIA</h1><p class="text-blue-300 text-xs">Gestión de Socios</p></div>
+    <nav class="flex-1 p-4 space-y-1">
+        <a href="/dashboard"  class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">🏠 Dashboard</a>
+        <a href="/socios"     class="flex items-center gap-3 px-4 py-2 rounded-lg bg-blue-700 font-medium">👥 Socios</a>
+        <a href="/cobradoras" class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">👩‍💼 Cobradoras</a>
+        <a href="/talones"    class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">🧾 Talones</a>
+        <a href="/pagos"      class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">💳 Pagos</a>
+        <a href="/padron"     class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">📋 Padrón</a>
+        <a href="/inventario" class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">🩼 Inventario</a>
+        <a href="/admin"      class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">⚙️ Admin</a>
+    </nav>
+    <div class="p-4 border-t border-blue-700"><button onclick="logout()" class="text-sm text-red-300 hover:text-red-200">Cerrar sesión</button></div>
+</aside>
+<main class="ml-64 flex-1 p-8">
+    <div class="flex items-center justify-between mb-6">
+        <h2 class="text-2xl font-bold text-blue-900">Socios</h2>
+        <button onclick="abrirModal()" class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700">+ Nuevo socio</button>
+    </div>
+    <div class="bg-white rounded-xl shadow p-4 mb-6 flex gap-4 flex-wrap">
+        <select id="filtroEstado" class="border rounded px-3 py-2 text-sm" onchange="cargarSocios()">
+            <option value="">Todos</option>
+            <option value="ACTIVO" selected>Activos</option>
+            <option value="INACTIVO">Inactivos</option>
+            <option value="BAJA">Baja definitiva</option>
+        </select>
+        <select id="filtroCobradora" class="border rounded px-3 py-2 text-sm" onchange="cargarSocios()">
+            <option value="">Todas las cobradoras</option>
+        </select>
+    </div>
+    <div class="bg-white rounded-xl shadow overflow-hidden">
+        <table class="w-full text-sm">
+            <thead class="bg-blue-50 text-blue-800 font-semibold">
+                <tr>
+                    <th class="px-4 py-3 text-left">#</th>
+                    <th class="px-4 py-3 text-left">Nombre</th>
+                    <th class="px-4 py-3 text-left">DNI</th>
+                    <th class="px-4 py-3 text-left">Dirección</th>
+                    <th class="px-4 py-3 text-left">Localidad</th>
+                    <th class="px-4 py-3 text-left">Cobradora</th>
+                    <th class="px-4 py-3 text-left">Responsable</th>
+                    <th class="px-4 py-3 text-left">Estado</th>
+                    <th class="px-4 py-3 text-left">Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="tablaSocios" class="divide-y divide-gray-100"></tbody>
+        </table>
+    </div>
+</main>
+
+<!-- Modal -->
+<div id="modal" class="fixed inset-0 bg-black bg-opacity-40 flex items-start justify-center hidden z-50 overflow-y-auto py-8">
+    <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-2xl mx-4">
+        <h3 id="modalTitulo" class="text-xl font-bold text-blue-800 mb-6">Nuevo Socio</h3>
+        <div id="modalErr" class="hidden bg-red-100 text-red-700 rounded p-2 mb-4 text-sm"></div>
+
+        <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Datos del socio</h4>
+        <div class="grid grid-cols-2 gap-4">
+            <div><label class="text-sm text-gray-600">Nº Socio</label><input id="fNumero" type="number" class="w-full border rounded px-3 py-2 mt-1"></div>
+            <div><label class="text-sm text-gray-600">DNI</label><input id="fDni" class="w-full border rounded px-3 py-2 mt-1"></div>
+            <div class="col-span-2"><label class="text-sm text-gray-600">Nombre completo</label><input id="fNombre" class="w-full border rounded px-3 py-2 mt-1"></div>
+            <div class="col-span-2"><label class="text-sm text-gray-600">Dirección</label><input id="fDireccion" class="w-full border rounded px-3 py-2 mt-1"></div>
+            <div><label class="text-sm text-gray-600">Teléfono</label><input id="fTelefono" class="w-full border rounded px-3 py-2 mt-1" placeholder="Opcional"></div>
+            <div>
+                <label class="text-sm text-gray-600">Provincia</label>
+                <select id="fProvincia" class="w-full border rounded px-3 py-2 mt-1" onchange="cargarLocalidades('fProvincia','fLocalidad')">
+                    <option value="">-- Seleccione --</option>
+                </select>
+            </div>
+            <div>
+                <label class="text-sm text-gray-600">Localidad</label>
+                <select id="fLocalidad" class="w-full border rounded px-3 py-2 mt-1">
+                    <option value="">-- Seleccione provincia --</option>
+                </select>
+            </div>
+            <div>
+                <label class="text-sm text-gray-600">Cobradora</label>
+                <select id="fCobradora" class="w-full border rounded px-3 py-2 mt-1"></select>
+            </div>
+            <div>
+                <label class="text-sm text-gray-600">Estado</label>
+                <select id="fEstado" class="w-full border rounded px-3 py-2 mt-1">
+                    <option value="ACTIVO">Activo</option>
+                    <option value="INACTIVO">Inactivo</option>
+                    <option value="BAJA">Baja</option>
+                </select>
+            </div>
+            <div><label class="text-sm text-gray-600">Fecha de alta</label><input id="fFechaAlta" type="date" class="w-full border rounded px-3 py-2 mt-1"></div>
+            <div class="flex items-center gap-2 mt-5">
+                <input id="fResponsable" type="checkbox" onchange="toggleResponsable()">
+                <label class="text-sm text-gray-600">Tiene responsable</label>
+            </div>
+        </div>
+
+        <!-- Sección responsable colapsable -->
+        <div id="seccionResponsable" class="hidden mt-6 border-t pt-5">
+            <h4 class="text-sm font-semibold text-orange-600 uppercase tracking-wide mb-3">Datos del socio anexo</h4>
+            <p class="text-xs text-gray-400 mb-3">Dirección, localidad y cobradora se heredan automáticamente del socio principal.</p>
+            <div class="grid grid-cols-2 gap-4">
+                <div><label class="text-sm text-gray-600">Nº Socio anexo</label><input id="rNumero" type="number" class="w-full border rounded px-3 py-2 mt-1"></div>
+                <div><label class="text-sm text-gray-600">DNI anexo</label><input id="rDni" class="w-full border rounded px-3 py-2 mt-1"></div>
+                <div class="col-span-2"><label class="text-sm text-gray-600">Nombre completo anexo</label><input id="rNombre" class="w-full border rounded px-3 py-2 mt-1"></div>
+                <div><label class="text-sm text-gray-600">Teléfono anexo</label><input id="rTelefono" class="w-full border rounded px-3 py-2 mt-1" placeholder="Opcional"></div>
+                <div>
+                    <label class="text-sm text-gray-600">Estado</label>
+                    <select id="rEstado" class="w-full border rounded px-3 py-2 mt-1">
+                        <option value="ACTIVO">Activo</option>
+                        <option value="INACTIVO">Inactivo</option>
+                        <option value="BAJA">Baja</option>
+                    </select>
+                </div>
+                <div><label class="text-sm text-gray-600">Fecha de alta</label><input id="rFechaAlta" type="date" class="w-full border rounded px-3 py-2 mt-1"></div>
+            </div>
+        </div>
+
+        <div class="flex justify-end gap-3 mt-6">
+            <button onclick="cerrarModal()" class="px-5 py-2 border rounded-lg text-gray-600 hover:bg-gray-50">Cancelar</button>
+            <button onclick="guardarSocio()" class="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Guardar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let editId = null;
+const ESTADOS = { ACTIVO:'bg-green-100 text-green-700', INACTIVO:'bg-yellow-100 text-yellow-700', BAJA:'bg-red-100 text-red-700' };
+
+async function logout() { await fetch('/api/auth/logout',{method:'POST'}); window.location.href='/login'; }
+
+async function cargarProvincias() {
+    const r = await fetch('/api/provincias');
+    const prov = await r.json();
+    const opts = '<option value="">-- Seleccione --</option>' + prov.map(p=>`<option value="${p.id_provincia}">${p.nombre}</option>`).join('');
+    document.getElementById('fProvincia').innerHTML = opts;
+}
+
+async function cargarLocalidades(provSel, locSel) {
+    const idProv = document.getElementById(provSel).value;
+    const sel = document.getElementById(locSel);
+    if (!idProv) { sel.innerHTML = '<option value="">-- Seleccione provincia --</option>'; return; }
+    const r = await fetch('/api/localidades?provincia=' + idProv);
+    const locs = await r.json();
+    sel.innerHTML = '<option value="">-- Seleccione localidad --</option>' + locs.map(l=>`<option value="${l.id_localidad}">${l.nombre}</option>`).join('');
+}
+
+function toggleResponsable() {
+    const checked = document.getElementById('fResponsable').checked;
+    document.getElementById('seccionResponsable').classList.toggle('hidden', !checked);
+}
+
+async function cargarCobradoras() {
+    const r = await fetch('/api/cobradoras'); const cobs = await r.json();
+    [document.getElementById('filtroCobradora'), document.getElementById('fCobradora')].forEach(s=>{
+        if (!s) return;
+        const base = s.id === 'filtroCobradora' ? '<option value="">Todas</option>' : '<option value="0">Sin cobradora</option>';
+        s.innerHTML = base + cobs.filter(c=>c.activa).map(c=>`<option value="${c.id_cobradora}">${c.nombre}</option>`).join('');
+    });
+}
+
+async function cargarSocios() {
+    const estado = document.getElementById('filtroEstado').value;
+    const cob    = document.getElementById('filtroCobradora').value;
+    const params = new URLSearchParams();
+    if (estado) params.set('estado', estado);
+    if (cob)    params.set('cobradora', cob);
+    const r = await fetch('/api/socios?' + params); const lista = await r.json();
+    const tbody = document.getElementById('tablaSocios');
+    const principales = lista.filter(s => !s.id_socio_principal || s.id_socio_principal === 0);
+    const anexos      = lista.filter(s => s.id_socio_principal && s.id_socio_principal > 0);
+    let rows = '';
+    for (const s of principales) {
+        const anexo = anexos.find(a => a.id_socio_principal === s.id_socio);
+        rows += `
+        <tr class="hover:bg-gray-50">
+            <td class="px-4 py-3 font-mono">${s.numero_socio}</td>
+            <td class="px-4 py-3 font-medium">${s.nombre_completo}</td>
+            <td class="px-4 py-3">${s.dni}</td>
+            <td class="px-4 py-3 text-gray-500">${s.direccion}</td>
+            <td class="px-4 py-3 text-gray-500 text-xs">${s.nombre_localidad ? s.nombre_localidad + (s.nombre_provincia ? ', ' + s.nombre_provincia : '') : '-'}</td>
+            <td class="px-4 py-3">${s.nombre_cobradora||'-'}</td>
+            <td class="px-4 py-3 text-xs">${anexo ? `${anexo.nombre_completo} (Nº ${anexo.numero_socio})` : '-'}</td>
+            <td class="px-4 py-3"><span class="px-2 py-1 rounded-full text-xs font-medium ${ESTADOS[s.estado]||''}">${s.estado}</span></td>
+            <td class="px-4 py-3 flex gap-2">
+                <button onclick="editarSocio(${s.id_socio})" class="text-blue-600 hover:underline text-xs">Editar</button>
+                <button onclick="cambiarEstadoSocio(${s.id_socio},'BAJA')" class="text-red-500 hover:underline text-xs">Dar baja</button>
+            </td>
+        </tr>`;
+        if (anexo) {
+            rows += `
+        <tr class="bg-orange-50 text-gray-600 text-xs">
+            <td class="px-4 py-3 pl-8 font-mono text-orange-700">↳ ${anexo.numero_socio}</td>
+            <td class="px-4 py-3 italic">${anexo.nombre_completo}</td>
+            <td class="px-4 py-3">${anexo.dni}</td>
+            <td class="px-4 py-3 text-gray-400">${anexo.direccion||'-'}</td>
+            <td class="px-4 py-3 text-gray-400">-</td>
+            <td class="px-4 py-3 text-gray-400">-</td>
+            <td class="px-4 py-3 text-orange-700 font-medium">Anexo</td>
+            <td class="px-4 py-3"><span class="px-2 py-1 rounded-full text-xs font-medium ${ESTADOS[anexo.estado]||''}">${anexo.estado}</span></td>
+            <td class="px-4 py-3 flex gap-2">
+                <button onclick="editarSocio(${anexo.id_socio})" class="text-blue-600 hover:underline text-xs">Editar</button>
+                <button onclick="cambiarEstadoSocio(${anexo.id_socio},'BAJA')" class="text-red-500 hover:underline text-xs">Dar baja</button>
+            </td>
+        </tr>`;
+        }
+    }
+    tbody.innerHTML = rows || '<tr><td colspan="9" class="text-center py-8 text-gray-400">No hay socios</td></tr>';
+}
+
+function abrirModal() {
+    editId = null;
+    document.getElementById('modalTitulo').textContent = 'Nuevo Socio';
+    ['fNumero','fDni','fNombre','fDireccion','fTelefono','fFechaAlta','rNumero','rDni','rNombre','rTelefono','rFechaAlta'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+    document.getElementById('fEstado').value = 'ACTIVO';
+    document.getElementById('rEstado').value = 'ACTIVO';
+    document.getElementById('fResponsable').checked = false;
+    document.getElementById('fCobradora').value = '0';
+    document.getElementById('fProvincia').value = '';
+    document.getElementById('fLocalidad').innerHTML = '<option value="">-- Seleccione provincia --</option>';
+    document.getElementById('seccionResponsable').classList.add('hidden');
+    document.getElementById('modalErr').classList.add('hidden');
+    document.getElementById('modal').classList.remove('hidden');
+}
+
+async function editarSocio(id) {
+    const r = await fetch('/api/socios/'+id); const s = await r.json();
+    editId = id;
+
+    // Si es un socio ANEXO (tiene principal), mostrar info del principal
+    if (s.id_socio_principal && s.id_socio_principal > 0) {
+        const rp = await fetch('/api/socios/'+s.id_socio_principal);
+        const principal = await rp.json();
+        document.getElementById('modalTitulo').textContent =
+            'Editar Socio (Anexo de: Nº ' + principal.numero_socio + ' – ' + principal.nombre_completo + ')';
+    } else {
+        document.getElementById('modalTitulo').textContent = 'Editar Socio';
+    }
+
+    document.getElementById('fNumero').value    = s.numero_socio;
+    document.getElementById('fDni').value       = s.dni;
+    document.getElementById('fNombre').value    = s.nombre_completo;
+    document.getElementById('fDireccion').value = s.direccion;
+    document.getElementById('fTelefono').value  = s.telefono || '';
+    document.getElementById('fEstado').value    = s.estado;
+    document.getElementById('fFechaAlta').value = s.fecha_alta;
+    document.getElementById('fResponsable').checked = s.tiene_responsable;
+    document.getElementById('fCobradora').value = s.id_cobradora;
+    document.getElementById('seccionResponsable').classList.toggle('hidden', !s.tiene_responsable);
+
+    if (s.id_localidad) {
+        const lr = await fetch('/api/localidades');
+        const locs = await lr.json();
+        const loc = locs.find(l => l.id_localidad === s.id_localidad);
+        if (loc) {
+            document.getElementById('fProvincia').value = loc.id_provincia;
+            await cargarLocalidades('fProvincia','fLocalidad');
+            document.getElementById('fLocalidad').value = s.id_localidad;
+        }
+    } else {
+        document.getElementById('fProvincia').value = '';
+        document.getElementById('fLocalidad').innerHTML = '<option value="">-- Seleccione provincia --</option>';
+    }
+
+    // Cargar datos del anexo si tiene responsable
+    if (s.tiene_responsable) {
+        const ra = await fetch('/api/socios?estado=TODOS');
+        const todos = await ra.json();
+        const anexo = todos.find(a => a.id_socio_principal === s.id_socio);
+        if (anexo) {
+            document.getElementById('rNumero').value   = anexo.numero_socio;
+            document.getElementById('rDni').value      = anexo.dni;
+            document.getElementById('rNombre').value   = anexo.nombre_completo;
+            document.getElementById('rTelefono').value = anexo.telefono || '';
+            document.getElementById('rEstado').value   = anexo.estado;
+            document.getElementById('rFechaAlta').value= anexo.fecha_alta;
+        } else {
+            ['rNumero','rDni','rNombre','rTelefono','rFechaAlta'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+            document.getElementById('rEstado').value = 'ACTIVO';
+        }
+    }
+
+    document.getElementById('modalErr').classList.add('hidden');
+    document.getElementById('modal').classList.remove('hidden');
+}
+
+function cerrarModal() { document.getElementById('modal').classList.add('hidden'); }
+
+async function guardarSocio() {
+    const tieneResp = document.getElementById('fResponsable').checked;
+    const body = {
+        numero_socio:      parseInt(document.getElementById('fNumero').value),
+        dni:               document.getElementById('fDni').value,
+        nombre_completo:   document.getElementById('fNombre').value,
+        direccion:         document.getElementById('fDireccion').value,
+        telefono:          document.getElementById('fTelefono').value,
+        id_localidad:      parseInt(document.getElementById('fLocalidad').value)||0,
+        id_cobradora:      parseInt(document.getElementById('fCobradora').value)||0,
+        estado:            document.getElementById('fEstado').value,
+        fecha_alta:        document.getElementById('fFechaAlta').value,
+        tiene_responsable: tieneResp
+    };
+    if (tieneResp) {
+        body.responsable = {
+            numero_socio:    parseInt(document.getElementById('rNumero').value),
+            dni:             document.getElementById('rDni').value,
+            nombre_completo: document.getElementById('rNombre').value,
+            telefono:        document.getElementById('rTelefono').value,
+            estado:          document.getElementById('rEstado').value,
+            fecha_alta:      document.getElementById('rFechaAlta').value
+        };
+    }
+    const url    = editId ? '/api/socios/'+editId : '/api/socios';
+    const method = editId ? 'PUT' : 'POST';
+    const r = await fetch(url, { method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    const data = await r.json();
+    if (r.ok && !data.error) { cerrarModal(); cargarSocios(); }
+    else {
+        const e = document.getElementById('modalErr');
+        e.textContent = data.error || 'Error desconocido';
+        e.classList.remove('hidden');
+    }
+}
+
+async function cambiarEstadoSocio(id, estado) {
+    if (!confirm('¿Confirmar cambio de estado a ' + estado + '?')) return;
+    await fetch('/api/socios/'+id+'/estado', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({estado})});
+    cargarSocios();
+}
+
+cargarProvincias();
+cargarCobradoras();
+cargarSocios();
+</script>
+</body>
+</html>

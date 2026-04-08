@@ -1,0 +1,30 @@
+FROM ubuntu:20.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Dependencias de compilación
+RUN apt-get update && apt-get install -y \
+    cmake g++ git \
+    libssl-dev libjsoncpp-dev uuid-dev \
+    libbrotli-dev zlib1g-dev \
+    libmariadb-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Compilar Drogon desde source
+RUN git clone --depth 1 --branch v1.9.12 https://github.com/drogonframework/drogon /tmp/drogon && \
+    cd /tmp/drogon && git submodule update --init && \
+    cmake -B build \
+        -DBUILD_EXAMPLES=OFF \
+        -DBUILD_TESTING=OFF \
+        -DCMAKE_BUILD_TYPE=Release && \
+    cmake --build build -j$(nproc) && \
+    cmake --install build && \
+    rm -rf /tmp/drogon
+
+# Copiar fuentes de Nexia
+WORKDIR /src
+COPY nexia/ .
+
+# Compilar Nexia
+RUN cmake -B build -DCMAKE_BUILD_TYPE=Release && \
+    cmake --build build -j$(nproc)

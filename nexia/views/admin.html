@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexia - Administración</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex">
+<aside class="w-64 bg-blue-900 text-white flex flex-col min-h-screen fixed">
+    <div class="p-6 border-b border-blue-700"><h1 class="text-2xl font-bold">NEXIA</h1><p class="text-blue-300 text-xs">Gestión de Socios</p></div>
+    <nav class="flex-1 p-4 space-y-1">
+        <a href="/dashboard"  class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">🏠 Dashboard</a>
+        <a href="/socios"     class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">👥 Socios</a>
+        <a href="/cobradoras" class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">👩‍💼 Cobradoras</a>
+        <a href="/talones"    class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">🧾 Talones</a>
+        <a href="/pagos"      class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">💳 Pagos</a>
+        <a href="/padron"     class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">📋 Padrón</a>
+        <a href="/inventario" class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">🩼 Inventario</a>
+        <a href="/admin"      class="flex items-center gap-3 px-4 py-2 rounded-lg bg-blue-700 font-medium">⚙️ Admin</a>
+    </nav>
+    <div class="p-4 border-t border-blue-700"><button onclick="logout()" class="text-sm text-red-300 hover:text-red-200">Cerrar sesión</button></div>
+</aside>
+<main class="ml-64 flex-1 p-8">
+    <h2 class="text-2xl font-bold text-blue-900 mb-6">Administración</h2>
+    <!-- Tabs -->
+    <div class="flex gap-4 mb-6 border-b border-gray-200">
+        <button onclick="mostrarTab('params')"  id="tab-params"  class="pb-3 px-1 text-blue-700 border-b-2 border-blue-700 font-medium text-sm">Parámetros</button>
+        <button onclick="mostrarTab('usuarios')" id="tab-usuarios" class="pb-3 px-1 text-gray-500 hover:text-gray-700 text-sm">Usuarios</button>
+        <button onclick="mostrarTab('provincias')" id="tab-provincias" class="pb-3 px-1 text-gray-500 hover:text-gray-700 text-sm">Provincias</button>
+        <button onclick="mostrarTab('localidades')" id="tab-localidades" class="pb-3 px-1 text-gray-500 hover:text-gray-700 text-sm">Localidades</button>
+    </div>
+    <!-- Parámetros -->
+    <div id="tab-params-content">
+        <div class="bg-white rounded-xl shadow p-6 max-w-lg">
+            <h3 class="font-semibold text-blue-800 mb-5">Parámetros del sistema</h3>
+            <div class="space-y-4">
+                <div class="border-b pb-4 mb-2">
+                    <p class="text-xs text-gray-400 uppercase font-semibold mb-3">Datos de la asociación</p>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="text-sm text-gray-600">Nombre de la asociación</label>
+                            <input id="pNombreAsoc" type="text" class="w-full border rounded px-3 py-2 mt-1" placeholder="Ej: Asociación de Jubilados">
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="text-sm text-gray-600">Domicilio</label>
+                                <input id="pDomicilio" type="text" class="w-full border rounded px-3 py-2 mt-1">
+                            </div>
+                            <div>
+                                <label class="text-sm text-gray-600">Teléfono</label>
+                                <input id="pTelefono" type="text" class="w-full border rounded px-3 py-2 mt-1">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="text-sm text-gray-600">Localidad</label>
+                                <input id="pLocalidadAsoc" type="text" class="w-full border rounded px-3 py-2 mt-1">
+                            </div>
+                            <div>
+                                <label class="text-sm text-gray-600">Provincia</label>
+                                <input id="pProvinciaAsoc" type="text" class="w-full border rounded px-3 py-2 mt-1">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-sm text-gray-600">Email</label>
+                            <input id="pEmail" type="email" class="w-full border rounded px-3 py-2 mt-1" placeholder="Ej: info@asociacion.org">
+                        </div>
+                        <div>
+                            <label class="text-sm text-gray-600">Logo de la asociación</label>
+                            <!-- valor oculto que se envía al servidor -->
+                            <input type="hidden" id="pLogoUrl">
+                            <!-- zona de preview / drop -->
+                            <div id="logoZona" onclick="document.getElementById('pLogoFile').click()"
+                                 class="mt-1 flex flex-col items-center justify-center gap-2 border-2 border-dashed border-gray-300 rounded-lg p-4 cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition">
+                                <svg id="logoIcono" xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                <img id="logoImg" src="" alt="Logo" class="hidden max-h-20 max-w-full object-contain rounded">
+                                <p id="logoTexto" class="text-xs text-gray-500">Hacer clic para elegir imagen (PNG, JPG, SVG)</p>
+                            </div>
+                            <input id="pLogoFile" type="file" accept="image/*" class="hidden" onchange="cargarLogoArchivo(event)">
+                            <button type="button" id="btnQuitarLogo" onclick="quitarLogo()" class="hidden mt-1 text-xs text-red-500 hover:underline">✕ Quitar logo</button>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-400 uppercase font-semibold mb-3">Cuotas y cobranza</p>
+                    <label class="text-sm text-gray-600">Cuota simple ($)</label>
+                    <input id="pCuotaSimple" type="number" step="0.01" class="w-full border rounded px-3 py-2 mt-1">
+                </div>
+                <div>
+                    <label class="text-sm text-gray-600">Cuota con responsable ($)</label>
+                    <input id="pCuotaResp" type="number" step="0.01" class="w-full border rounded px-3 py-2 mt-1">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-sm text-gray-600">Mes de cobranza actual</label>
+                        <select id="pMes" class="w-full border rounded px-3 py-2 mt-1">
+                            <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
+                            <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
+                            <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
+                            <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-sm text-gray-600">Año</label>
+                            <input id="pAnio" type="number" class="w-full border rounded px-3 py-2 mt-1">
+                        </div>
+                    </div>
+                </div>
+                <button onclick="guardarParams()" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">Guardar parámetros</button>
+                <div id="paramsMsg" class="hidden text-sm p-2 rounded"></div>
+            </div>
+        </div>
+    </div>
+    <!-- Usuarios -->
+    <div id="tab-usuarios-content" class="hidden">
+        <div class="flex justify-end mb-4">
+            <button onclick="abrirModalUser()" class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700">+ Nuevo usuario</button>
+        </div>
+        <div class="bg-white rounded-xl shadow overflow-hidden mb-6">
+            <table class="w-full text-sm">
+                <thead class="bg-blue-50 text-blue-800 font-semibold">
+                    <tr>
+                        <th class="px-4 py-3 text-left">Usuario</th>
+                        <th class="px-4 py-3 text-left">Nombre</th>
+                        <th class="px-4 py-3 text-left">Rol</th>
+                        <th class="px-4 py-3 text-left">Estado</th>
+                        <th class="px-4 py-3 text-left">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaUsuarios" class="divide-y divide-gray-100"></tbody>
+            </table>
+        </div>
+    </div>
+    <!-- Provincias -->
+    <div id="tab-provincias-content" class="hidden">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-white rounded-xl shadow p-6">
+                <h3 class="font-semibold text-blue-800 mb-4">Nueva provincia</h3>
+                <div class="space-y-3">
+                    <div>
+                        <label class="text-sm text-gray-600">Nombre</label>
+                        <input id="pProvNombre" class="w-full border rounded px-3 py-2 mt-1" placeholder="Ej: San Luis">
+                    </div>
+                    <button onclick="agregarProvincia()" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 text-sm">+ Agregar provincia</button>
+                    <div id="pProvMsg" class="hidden text-sm p-2 rounded"></div>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl shadow p-6">
+                <h3 class="font-semibold text-blue-800 mb-4">Provincias cargadas</h3>
+                <div class="overflow-y-auto max-h-96">
+                    <table class="w-full text-sm">
+                        <thead class="bg-blue-50 text-blue-800">
+                            <tr>
+                                <th class="px-3 py-2 text-left">Nombre</th>
+                                <th class="px-3 py-2"></th>
+</tr>
+                        </thead>
+                        <tbody id="tablaProvincias" class="divide-y divide-gray-100"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Localidades -->
+    <div id="tab-localidades-content" class="hidden">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Agregar localidad -->
+            <div class="bg-white rounded-xl shadow p-6">
+                <h3 class="font-semibold text-blue-800 mb-4">Nueva localidad</h3>
+                <div class="space-y-3">
+                    <div>
+                        <label class="text-sm text-gray-600">Provincia</label>
+                        <select id="lProvincia" class="w-full border rounded px-3 py-2 mt-1" onchange="cargarTablaLocalidades()">
+                            <option value="">-- Seleccione --</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-600">Nombre de la localidad</label>
+                        <input id="lNombre" class="w-full border rounded px-3 py-2 mt-1" placeholder="Ej: Villa María">
+                    </div>
+                    <button onclick="agregarLocalidad()" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 text-sm">+ Agregar localidad</button>
+                    <div id="lMsg" class="hidden text-sm p-2 rounded"></div>
+                </div>
+            </div>
+            <!-- Tabla localidades -->
+            <div class="bg-white rounded-xl shadow p-6">
+                <h3 class="font-semibold text-blue-800 mb-4">Localidades cargadas</h3>
+                <select id="lFiltroProv" class="w-full border rounded px-3 py-2 mb-3 text-sm" onchange="cargarTablaLocalidades()">
+                    <option value="">Todas las provincias</option>
+                </select>
+                <div class="overflow-y-auto max-h-80">
+                    <table class="w-full text-sm">
+                        <thead class="bg-blue-50 text-blue-800">
+                            <tr>
+                                <th class="px-3 py-2 text-left">Localidad</th>
+                                <th class="px-3 py-2 text-left">Provincia</th>
+                                <th class="px-3 py-2"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaLocalidades" class="divide-y divide-gray-100"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+<!-- Modal usuario -->
+<div id="modalUser" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center hidden z-50">
+    <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
+        <h3 id="modalUserTitulo" class="text-xl font-bold text-blue-800 mb-6">Nuevo Usuario</h3>
+        <div id="modalUserErr" class="hidden bg-red-100 text-red-700 rounded p-2 mb-4 text-sm"></div>
+        <div class="space-y-4">
+            <div><label class="text-sm text-gray-600">Nombre de usuario</label><input id="uUsername" class="w-full border rounded px-3 py-2 mt-1"></div>
+            <div><label class="text-sm text-gray-600">Nombre completo</label><input id="uNombre" class="w-full border rounded px-3 py-2 mt-1"></div>
+            <div><label class="text-sm text-gray-600">Contraseña</label><input id="uPassword" type="password" class="w-full border rounded px-3 py-2 mt-1" placeholder="Dejar en blanco para no cambiar"></div>
+            <div><label class="text-sm text-gray-600">Rol</label>
+                <select id="uRol" class="w-full border rounded px-3 py-2 mt-1">
+                    <option value="OPERADOR">Operador</option>
+                    <option value="ADMIN">Administrador</option>
+                </select>
+            </div>
+        </div>
+        <div class="flex justify-end gap-3 mt-6">
+            <button onclick="cerrarModalUser()" class="px-5 py-2 border rounded-lg text-gray-600 hover:bg-gray-50">Cancelar</button>
+            <button onclick="guardarUser()" class="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Guardar</button>
+        </div>
+    </div>
+</div>
+<script>
+let editUserId = null;
+async function logout() { await fetch('/api/auth/logout',{method:'POST'}); window.location.href='/login'; }
+function mostrarTab(t) {
+    ['params','usuarios','provincias','localidades'].forEach(tab=>{
+        document.getElementById('tab-'+tab+'-content').classList.toggle('hidden', tab!==t);
+        const btn = document.getElementById('tab-'+tab);
+        btn.className = tab===t
+            ? 'pb-3 px-1 text-blue-700 border-b-2 border-blue-700 font-medium text-sm'
+            : 'pb-3 px-1 text-gray-500 hover:text-gray-700 text-sm';
+    });
+    if (t==='usuarios') cargarUsuarios();
+    if (t==='provincias') initProvincias();
+    if (t==='localidades') initLocalidades();
+}
+async function init() {
+    const r = await fetch('/api/admin/parametros'); const d = await r.json();
+    document.getElementById('pCuotaSimple').value   = d.cuota_simple||0;
+    document.getElementById('pCuotaResp').value     = d.cuota_con_responsable||0;
+    document.getElementById('pMes').value           = d.mes_cobranza||1;
+    document.getElementById('pAnio').value          = d.anio_cobranza||(new Date().getFullYear());
+    document.getElementById('pNombreAsoc').value    = d.nombre_asociacion||'';
+    document.getElementById('pDomicilio').value     = d.domicilio||'';
+    document.getElementById('pTelefono').value      = d.telefono||'';
+    document.getElementById('pLocalidadAsoc').value = d.localidad||'';
+    document.getElementById('pProvinciaAsoc').value = d.provincia||'';
+    document.getElementById('pEmail').value         = d.email||'';
+    const logoUrl = d.logo_url||'';
+    document.getElementById('pLogoUrl').value = logoUrl;
+    aplicarLogoPreview(logoUrl);
+}
+async function guardarParams() {
+    const body = {
+        id_parametro:           1,
+        cuota_simple:           parseFloat(document.getElementById('pCuotaSimple').value)||0,
+        cuota_con_responsable:  parseFloat(document.getElementById('pCuotaResp').value)||0,
+        mes_cobranza:           parseInt(document.getElementById('pMes').value),
+        anio_cobranza:          parseInt(document.getElementById('pAnio').value),
+        nombre_asociacion:      document.getElementById('pNombreAsoc').value,
+        domicilio:              document.getElementById('pDomicilio').value,
+        telefono:               document.getElementById('pTelefono').value,
+        localidad:              document.getElementById('pLocalidadAsoc').value,
+        provincia:              document.getElementById('pProvinciaAsoc').value,
+        email:                  document.getElementById('pEmail').value,
+        logo_url:               document.getElementById('pLogoUrl').value
+    };
+    const r = await fetch('/api/admin/parametros', {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+    const msg = document.getElementById('paramsMsg');
+    if (r.ok) {
+        msg.className='text-sm p-2 rounded bg-green-100 text-green-700';
+        msg.textContent='✓ Parámetros guardados';
+    } else {
+        let errTxt = `Error HTTP ${r.status}`;
+        try { const d = await r.json(); errTxt = d.error || errTxt; } catch(_) {}
+        msg.className='text-sm p-2 rounded bg-red-100 text-red-700';
+        msg.textContent = errTxt;
+    }
+    msg.classList.remove('hidden'); setTimeout(()=>msg.classList.add('hidden'),4000);
+}
+function aplicarLogoPreview(src) {
+    const img     = document.getElementById('logoImg');
+    const icono   = document.getElementById('logoIcono');
+    const texto   = document.getElementById('logoTexto');
+    const btnQuit = document.getElementById('btnQuitarLogo');
+    if (src) {
+        img.src = src;
+        img.classList.remove('hidden');
+        icono.classList.add('hidden');
+        texto.textContent = 'Clic para cambiar imagen';
+        btnQuit.classList.remove('hidden');
+    } else {
+        img.src = '';
+        img.classList.add('hidden');
+        icono.classList.remove('hidden');
+        texto.textContent = 'Hacer clic para elegir imagen (PNG, JPG, SVG)';
+        btnQuit.classList.add('hidden');
+    }
+}
+function cargarLogoArchivo(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+        alert('La imagen no debe superar 5 MB.');
+        event.target.value = '';
+        return;
+    }
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+            // Comprimir a máx 600px manteniendo proporción
+            const MAX = 600;
+            let w = img.width, h = img.height;
+            if (w > MAX || h > MAX) {
+                if (w >= h) { h = Math.round(h * MAX / w); w = MAX; }
+                else        { w = Math.round(w * MAX / h); h = MAX; }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            // PNG para logos con transparencia, JPEG al 88% para fotos
+            const isPng = file.type === 'image/png' || file.type === 'image/svg+xml';
+            const base64 = isPng
+                ? canvas.toDataURL('image/png')
+                : canvas.toDataURL('image/jpeg', 0.88);
+            document.getElementById('pLogoUrl').value = base64;
+            aplicarLogoPreview(base64);
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+function quitarLogo() {
+    document.getElementById('pLogoUrl').value = '';
+    document.getElementById('pLogoFile').value = '';
+    aplicarLogoPreview('');
+}
+async function cargarUsuarios() {
+    const r = await fetch('/api/admin/usuarios'); const lista = await r.json();
+    const tbody = document.getElementById('tablaUsuarios');
+    tbody.innerHTML = lista.map(u=>`
+        <tr class="hover:bg-gray-50">
+            <td class="px-4 py-3 font-mono text-sm">${u.username}</td>
+            <td class="px-4 py-3">${u.nombre_completo}</td>
+            <td class="px-4 py-3"><span class="px-2 py-1 rounded-full text-xs ${u.rol==='ADMIN'?'bg-purple-100 text-purple-700':'bg-blue-100 text-blue-700'}">${u.rol}</span></td>
+            <td class="px-4 py-3"><span class="px-2 py-1 rounded-full text-xs ${u.activo?'bg-green-100 text-green-700':'bg-gray-100 text-gray-500'}">${u.activo?'Activo':'Inactivo'}</span></td>
+            <td class="px-4 py-3 flex gap-2 flex-wrap">
+                <button onclick="editarUser(${u.id_usuario})" class="text-blue-600 hover:underline text-xs">Editar</button>
+                <button onclick="resetPassword(${u.id_usuario})" class="text-yellow-600 hover:underline text-xs">Reset pwd</button>
+                <button onclick="toggleUser(${u.id_usuario},${u.activo})" class="${u.activo?'text-red-500':'text-green-600'} hover:underline text-xs">${u.activo?'Desactivar':'Activar'}</button>
+            </td>
+        </tr>`).join('') || '<tr><td colspan="5" class="text-center py-8 text-gray-400">No hay usuarios</td></tr>';
+}
+function abrirModalUser() {
+    editUserId = null;
+    document.getElementById('modalUserTitulo').textContent = 'Nuevo Usuario';
+    ['uUsername','uNombre','uPassword'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('uRol').value = 'OPERADOR';
+    document.getElementById('modalUserErr').classList.add('hidden');
+    document.getElementById('modalUser').classList.remove('hidden');
+}
+async function editarUser(id) {
+    const r = await fetch('/api/admin/usuarios'); const lista = await r.json();
+    const u = lista.find(x=>x.id_usuario===id); if(!u) return;
+    editUserId = id;
+    document.getElementById('modalUserTitulo').textContent = 'Editar Usuario';
+    document.getElementById('uUsername').value = u.username;
+    document.getElementById('uNombre').value   = u.nombre_completo;
+    document.getElementById('uPassword').value = '';
+    document.getElementById('uRol').value      = u.rol;
+    document.getElementById('modalUser').classList.remove('hidden');
+}
+function cerrarModalUser() { document.getElementById('modalUser').classList.add('hidden'); }
+async function guardarUser() {
+    const body = {
+        username: document.getElementById('uUsername').value,
+        nombre_completo: document.getElementById('uNombre').value,
+        rol: document.getElementById('uRol').value
+    };
+    const pwd = document.getElementById('uPassword').value;
+    if(pwd) body.password = pwd;
+    const url = editUserId ? '/api/admin/usuarios/'+editUserId : '/api/admin/usuarios';
+    const method = editUserId ? 'PUT' : 'POST';
+    const r = await fetch(url, {method, headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+    const d = await r.json();
+    if(r.ok) { cerrarModalUser(); cargarUsuarios(); }
+    else { const e=document.getElementById('modalUserErr'); e.textContent=d.error||'Error'; e.classList.remove('hidden'); }
+}
+async function resetPassword(id) {
+    const pwd = prompt('Nueva contraseña:');
+    if(!pwd) return;
+    const r = await fetch('/api/admin/usuarios/'+id+'/reset', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({password:pwd})});
+    if(r.ok) alert('Contraseña restablecida');
+    else { const d=await r.json(); alert(d.error||'Error'); }
+}
+async function toggleUser(id, activo) {
+    const r = await fetch('/api/admin/usuarios/'+id+'/estado', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({activo:!activo})});
+    if(r.ok) cargarUsuarios();
+}
+init();
+
+// --- PROVINCIAS ---
+async function initProvincias() {
+    cargarTablaProvincias();
+}
+async function cargarTablaProvincias() {
+    const r = await fetch('/api/provincias');
+    const provs = await r.json();
+    const tbody = document.getElementById('tablaProvincias');
+    tbody.innerHTML = provs.map(p=>`
+        <tr class="hover:bg-gray-50">
+            <td class="px-3 py-2">${p.nombre}</td>
+            <td class="px-3 py-2 text-right">
+                <button onclick="eliminarProvincia(${p.id_provincia})" class="text-red-500 hover:underline text-xs">Eliminar</button>
+            </td>
+        </tr>`).join('') || '<tr><td colspan="2" class="text-center py-4 text-gray-400 text-xs">Sin provincias</td></tr>';
+    // Actualizar selectores de localidades si ya están inicializados
+    provinciasAdmin = provs;
+    const opts = '<option value="">-- Seleccione --</option>' + provs.map(p=>`<option value="${p.id_provincia}">${p.nombre}</option>`).join('');
+    const el = document.getElementById('lProvincia');
+    if (el) el.innerHTML = opts;
+    const filtEl = document.getElementById('lFiltroProv');
+    if (filtEl) filtEl.innerHTML = '<option value="">Todas las provincias</option>' + provs.map(p=>`<option value="${p.id_provincia}">${p.nombre}</option>`).join('');
+}
+async function agregarProvincia() {
+    const nombre = document.getElementById('pProvNombre').value.trim();
+    const msg    = document.getElementById('pProvMsg');
+    if (!nombre) {
+        msg.className='text-sm p-2 rounded bg-red-100 text-red-700';
+        msg.textContent='Ingrese el nombre de la provincia'; msg.classList.remove('hidden'); return;
+    }
+    const r = await fetch('/api/admin/provincias', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({nombre})});
+    const d = await r.json();
+    if (r.ok) {
+        document.getElementById('pProvNombre').value = '';
+        msg.className='text-sm p-2 rounded bg-green-100 text-green-700';
+        msg.textContent='Provincia agregada'; msg.classList.remove('hidden');
+        cargarTablaProvincias();
+    } else {
+        msg.className='text-sm p-2 rounded bg-red-100 text-red-700';
+        msg.textContent=d.error||'Error'; msg.classList.remove('hidden');
+    }
+    setTimeout(()=>msg.classList.add('hidden'),3000);
+}
+async function eliminarProvincia(id) {
+    if (!confirm('¿Eliminar esta provincia? Se eliminarán también sus localidades.')) return;
+    const r = await fetch('/api/admin/provincias/'+id, {method:'DELETE'});
+    if (r.ok) cargarTablaProvincias();
+    else { const d=await r.json(); alert(d.error||'Error al eliminar'); }
+}
+
+// --- LOCALIDADES ---
+let provinciasAdmin = [];
+async function initLocalidades() {
+    if (provinciasAdmin.length === 0) {
+        const r = await fetch('/api/provincias');
+        provinciasAdmin = await r.json();
+    }
+    const opts = '<option value="">-- Seleccione --</option>' + provinciasAdmin.map(p=>`<option value="${p.id_provincia}">${p.nombre}</option>`).join('');
+    document.getElementById('lProvincia').innerHTML = opts;
+    const filtOpts = '<option value="">Todas las provincias</option>' + provinciasAdmin.map(p=>`<option value="${p.id_provincia}">${p.nombre}</option>`).join('');
+    document.getElementById('lFiltroProv').innerHTML = filtOpts;
+    cargarTablaLocalidades();
+}
+async function cargarTablaLocalidades() {
+    const idProv = document.getElementById('lFiltroProv').value;
+    const url = '/api/localidades' + (idProv ? '?provincia='+idProv : '');
+    const r = await fetch(url);
+    const locs = await r.json();
+    const tbody = document.getElementById('tablaLocalidades');
+    tbody.innerHTML = locs.map(l=>`
+        <tr class="hover:bg-gray-50">
+            <td class="px-3 py-2">${l.nombre}</td>
+            <td class="px-3 py-2 text-gray-500 text-xs">${l.nombre_provincia||''}</td>
+            <td class="px-3 py-2 text-right">
+                <button onclick="eliminarLocalidad(${l.id_localidad})" class="text-red-500 hover:underline text-xs">Eliminar</button>
+            </td>
+        </tr>`).join('') || '<tr><td colspan="3" class="text-center py-4 text-gray-400 text-xs">Sin localidades</td></tr>';
+}
+async function agregarLocalidad() {
+    const nombre  = document.getElementById('lNombre').value.trim();
+    const idProv  = document.getElementById('lProvincia').value;
+    const msg     = document.getElementById('lMsg');
+    if (!nombre || !idProv) {
+        msg.className='text-sm p-2 rounded bg-red-100 text-red-700';
+        msg.textContent='Complete nombre y provincia'; msg.classList.remove('hidden'); return;
+    }
+    const r = await fetch('/api/admin/localidades', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({nombre, id_provincia:parseInt(idProv)})});
+    const d = await r.json();
+    if (r.ok) {
+        document.getElementById('lNombre').value='';
+        msg.className='text-sm p-2 rounded bg-green-100 text-green-700';
+        msg.textContent='Localidad agregada'; msg.classList.remove('hidden');
+        cargarTablaLocalidades();
+    } else {
+        msg.className='text-sm p-2 rounded bg-red-100 text-red-700';
+        msg.textContent=d.error||'Error'; msg.classList.remove('hidden');
+    }
+    setTimeout(()=>msg.classList.add('hidden'),3000);
+}
+async function eliminarLocalidad(id) {
+    if (!confirm('¿Eliminar esta localidad?')) return;
+    const r = await fetch('/api/admin/localidades/'+id, {method:'DELETE'});
+    if (r.ok) cargarTablaLocalidades();
+    else { const d=await r.json(); alert(d.error||'Error al eliminar'); }
+}
+</script>
+</body>
+</html>

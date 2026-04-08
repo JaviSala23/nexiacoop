@@ -1,0 +1,14 @@
+[Unit]
+Description=Nexia - Gestión de Socios
+After=network.target mysql.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/Nexia/nexia
+ExecStart=/home/Nexia/nexia/nexia
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

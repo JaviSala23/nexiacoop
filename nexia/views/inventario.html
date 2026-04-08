@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexia - Inventario</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex">
+
+<!-- Sidebar -->
+<aside class="w-64 bg-blue-900 text-white flex flex-col min-h-screen fixed">
+    <div class="p-6 border-b border-blue-700"><h1 class="text-2xl font-bold">NEXIA</h1><p class="text-blue-300 text-xs">Gestión de Socios</p></div>
+    <nav class="flex-1 p-4 space-y-1">
+        <a href="/dashboard"  class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">🏠 Dashboard</a>
+        <a href="/socios"     class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">👥 Socios</a>
+        <a href="/cobradoras" class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">👩‍💼 Cobradoras</a>
+        <a href="/talones"    class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">🧾 Talones</a>
+        <a href="/pagos"      class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">💳 Pagos</a>
+        <a href="/padron"     class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">📋 Padrón</a>
+        <a href="/inventario" class="flex items-center gap-3 px-4 py-2 rounded-lg bg-blue-700 font-medium">🩼 Inventario</a>
+        <a href="/admin"      class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">⚙️ Admin</a>
+    </nav>
+    <div class="p-4 border-t border-blue-700"><button onclick="logout()" class="text-sm text-red-300 hover:text-red-200">Cerrar sesión</button></div>
+</aside>
+
+<!-- Contenido -->
+<main class="ml-64 flex-1 p-8">
+    <div class="flex items-center justify-between mb-6">
+        <h2 class="text-2xl font-bold text-blue-900">Inventario de Elementos</h2>
+        <button onclick="abrirModalElemento()" class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700">+ Nuevo elemento</button>
+    </div>
+
+    <!-- Tarjetas de stock -->
+    <div id="tarjetasStock" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-8"></div>
+
+    <!-- Sección préstamos -->
+    <div class="bg-white rounded-xl shadow p-6">
+        <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+            <h3 class="text-lg font-bold text-gray-700">Préstamos</h3>
+            <div class="flex gap-3 flex-wrap">
+                <select id="filtroElemento" class="border rounded px-3 py-2 text-sm" onchange="cargarPrestamos()">
+                    <option value="">Todos los elementos</option>
+                </select>
+                <select id="filtroEstado" class="border rounded px-3 py-2 text-sm" onchange="cargarPrestamos()">
+                    <option value="">Todos</option>
+                    <option value="PRESTADO" selected>Prestados</option>
+                    <option value="DEVUELTO">Devueltos</option>
+                </select>
+                <button onclick="abrirModalPrestamo()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm">+ Registrar préstamo</button>
+            </div>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-blue-50 text-blue-800 font-semibold">
+                    <tr>
+                        <th class="px-4 py-3 text-left">Elemento</th>
+                        <th class="px-4 py-3 text-left">Socio</th>
+                        <th class="px-4 py-3 text-left">DNI</th>
+                        <th class="px-4 py-3 text-left">Fecha préstamo</th>
+                        <th class="px-4 py-3 text-left">Fecha devolución</th>
+                        <th class="px-4 py-3 text-left">Observaciones</th>
+                        <th class="px-4 py-3 text-left">Estado</th>
+                        <th class="px-4 py-3 text-left">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaPrestamos" class="divide-y divide-gray-100"></tbody>
+            </table>
+            <p id="sinPrestamos" class="text-center text-gray-400 py-6 hidden">No hay préstamos registrados.</p>
+        </div>
+    </div>
+</main>
+
+<!-- ===== MODAL ELEMENTO ===== -->
+<div id="modalElemento" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center hidden z-50">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-8">
+        <h3 id="tituloModalElemento" class="text-xl font-bold text-blue-900 mb-6">Nuevo Elemento</h3>
+        <input type="hidden" id="elId">
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
+                <input id="elNombre" type="text" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="Ej: Silla de ruedas">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+                <textarea id="elDescripcion" rows="2" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="Descripción opcional"></textarea>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Stock total *</label>
+                <input id="elStock" type="number" min="0" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="0">
+            </div>
+        </div>
+        <div id="elError" class="text-red-500 text-sm mt-3 hidden"></div>
+        <div class="flex justify-end gap-3 mt-6">
+            <button onclick="cerrarModalElemento()" class="px-4 py-2 rounded-lg border text-sm hover:bg-gray-50">Cancelar</button>
+            <button onclick="guardarElemento()" class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 text-sm">Guardar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== MODAL PRÉSTAMO ===== -->
+<div id="modalPrestamo" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center hidden z-50">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg p-8">
+        <h3 class="text-xl font-bold text-blue-900 mb-6">Registrar Préstamo</h3>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Elemento *</label>
+                <select id="prElemento" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"></select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Socio *</label>
+                <input id="prSocioBusqueda" type="text" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="Buscar por nombre o DNI..." oninput="buscarSocioPrestamo()">
+                <input type="hidden" id="prSocioId">
+                <div id="prSocioResultados" class="border rounded-lg mt-1 bg-white shadow-md max-h-40 overflow-y-auto hidden z-50 relative"></div>
+                <p id="prSocioSeleccionado" class="text-xs text-green-700 mt-1 hidden"></p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Fecha de préstamo *</label>
+                <input id="prFecha" type="date" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Observaciones</label>
+                <textarea id="prObservaciones" rows="2" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="Notas opcionales"></textarea>
+            </div>
+        </div>
+        <div id="prError" class="text-red-500 text-sm mt-3 hidden"></div>
+        <div class="flex justify-end gap-3 mt-6">
+            <button onclick="cerrarModalPrestamo()" class="px-4 py-2 rounded-lg border text-sm hover:bg-gray-50">Cancelar</button>
+            <button onclick="guardarPrestamo()" class="bg-green-600 text-white px-5 py-2 rounded-lg hover:bg-green-700 text-sm">Registrar préstamo</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== MODAL DEVOLUCIÓN ===== -->
+<div id="modalDevolucion" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center hidden z-50">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-8">
+        <h3 class="text-xl font-bold text-blue-900 mb-6">Registrar Devolución</h3>
+        <input type="hidden" id="devPrestamoId">
+        <p id="devDetalle" class="text-sm text-gray-600 mb-4"></p>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Fecha de devolución *</label>
+            <input id="devFecha" type="date" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+        </div>
+        <div id="devError" class="text-red-500 text-sm mt-3 hidden"></div>
+        <div class="flex justify-end gap-3 mt-6">
+            <button onclick="cerrarModalDevolucion()" class="px-4 py-2 rounded-lg border text-sm hover:bg-gray-50">Cancelar</button>
+            <button onclick="confirmarDevolucion()" class="bg-yellow-600 text-white px-5 py-2 rounded-lg hover:bg-yellow-700 text-sm">Confirmar devolución</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let socios = [];
+let elementos = [];
+let busquedaTimer = null;
+
+async function logout() {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    window.location.href = '/login';
+}
+
+// ─── INIT ────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+    document.getElementById('prFecha').value = hoy();
+    document.getElementById('devFecha').value = hoy();
+    await cargarElementos();
+    await cargarPrestamos();
+});
+
+function hoy() {
+    return new Date().toISOString().split('T')[0];
+}
+
+// ─── ELEMENTOS ───────────────────────────────────────────────
+async function cargarElementos() {
+    const res = await fetch('/api/inventario/elementos');
+    elementos = await res.json();
+    renderTarjetas();
+    actualizarFiltroElementos();
+    actualizarSelectPrestamo();
+}
+
+function renderTarjetas() {
+    const cont = document.getElementById('tarjetasStock');
+    cont.innerHTML = '';
+    if (!elementos.length) {
+        cont.innerHTML = '<p class="text-gray-400 text-sm col-span-4">No hay elementos registrados. Agregue uno con "+ Nuevo elemento".</p>';
+        return;
+    }
+    elementos.forEach(e => {
+        const prestados  = e.stock_prestado;
+        const disponible = e.stock_disponible;
+        const total      = e.stock_total;
+        const pct = total > 0 ? Math.round((prestados / total) * 100) : 0;
+        const card = document.createElement('div');
+        card.className = 'bg-white rounded-xl shadow p-5 border-l-4 ' +
+            (disponible === 0 && total > 0 ? 'border-red-500' : disponible < total ? 'border-yellow-400' : 'border-green-500');
+        card.innerHTML = `
+            <div class="flex justify-between items-start mb-2">
+                <p class="font-semibold text-gray-800 text-sm leading-tight">${e.nombre}</p>
+                <button onclick="abrirModalElemento(${JSON.stringify(e).replace(/"/g,'&quot;')})"
+                        class="text-gray-400 hover:text-blue-600 text-xs ml-2 shrink-0">✏️</button>
+            </div>
+            ${e.descripcion ? `<p class="text-xs text-gray-400 mb-3">${e.descripcion}</p>` : ''}
+            <div class="flex gap-3 text-sm mb-3">
+                <span class="bg-gray-100 px-2 py-1 rounded font-medium text-gray-700">Total: ${total}</span>
+                <span class="bg-green-100 px-2 py-1 rounded font-medium text-green-700">Disp.: ${disponible}</span>
+                <span class="bg-orange-100 px-2 py-1 rounded font-medium text-orange-700">Prest.: ${prestados}</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2">
+                <div class="bg-orange-400 h-2 rounded-full transition-all" style="width:${pct}%"></div>
+            </div>
+            <p class="text-xs text-gray-400 mt-1">${pct}% prestado</p>`;
+        cont.appendChild(card);
+    });
+}
+
+function actualizarFiltroElementos() {
+    const sel = document.getElementById('filtroElemento');
+    const val = sel.value;
+    sel.innerHTML = '<option value="">Todos los elementos</option>';
+    elementos.forEach(e => {
+        const opt = document.createElement('option');
+        opt.value = e.id_elemento; opt.textContent = e.nombre;
+        if (String(e.id_elemento) === val) opt.selected = true;
+        sel.appendChild(opt);
+    });
+}
+
+function actualizarSelectPrestamo() {
+    const sel = document.getElementById('prElemento');
+    sel.innerHTML = '<option value="">-- Seleccionar elemento --</option>';
+    elementos.filter(e => e.stock_disponible > 0).forEach(e => {
+        const opt = document.createElement('option');
+        opt.value = e.id_elemento;
+        opt.textContent = `${e.nombre} (disponibles: ${e.stock_disponible})`;
+        sel.appendChild(opt);
+    });
+}
+
+// ─── MODAL ELEMENTO ──────────────────────────────────────────
+function abrirModalElemento(el = null) {
+    document.getElementById('elError').classList.add('hidden');
+    if (el) {
+        document.getElementById('tituloModalElemento').textContent = 'Editar Elemento';
+        document.getElementById('elId').value          = el.id_elemento;
+        document.getElementById('elNombre').value      = el.nombre;
+        document.getElementById('elDescripcion').value = el.descripcion || '';
+        document.getElementById('elStock').value       = el.stock_total;
+    } else {
+        document.getElementById('tituloModalElemento').textContent = 'Nuevo Elemento';
+        document.getElementById('elId').value          = '';
+        document.getElementById('elNombre').value      = '';
+        document.getElementById('elDescripcion').value = '';
+        document.getElementById('elStock').value       = '';
+    }
+    document.getElementById('modalElemento').classList.remove('hidden');
+}
+
+function cerrarModalElemento() {
+    document.getElementById('modalElemento').classList.add('hidden');
+}
+
+async function guardarElemento() {
+    const errEl = document.getElementById('elError');
+    errEl.classList.add('hidden');
+    const id          = document.getElementById('elId').value;
+    const nombre      = document.getElementById('elNombre').value.trim();
+    const descripcion = document.getElementById('elDescripcion').value.trim();
+    const stock       = parseInt(document.getElementById('elStock').value);
+
+    if (!nombre) { errEl.textContent = 'El nombre es obligatorio'; errEl.classList.remove('hidden'); return; }
+    if (isNaN(stock) || stock < 0) { errEl.textContent = 'El stock debe ser 0 o mayor'; errEl.classList.remove('hidden'); return; }
+
+    const payload = { nombre, descripcion, stock_total: stock };
+    let res;
+    if (id) {
+        res = await fetch(`/api/inventario/elementos/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({...payload, activo:true}) });
+    } else {
+        res = await fetch('/api/inventario/elementos', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    }
+    const data = await res.json();
+    if (data.ok) {
+        cerrarModalElemento();
+        await cargarElementos();
+    } else {
+        errEl.textContent = data.error || 'Error al guardar';
+        errEl.classList.remove('hidden');
+    }
+}
+
+// ─── PRÉSTAMOS ───────────────────────────────────────────────
+async function cargarPrestamos() {
+    const idEl   = document.getElementById('filtroElemento').value;
+    const estado = document.getElementById('filtroEstado').value;
+    let url = '/api/inventario/prestamos?';
+    if (idEl)   url += `id_elemento=${idEl}&`;
+    if (estado) url += `estado=${estado}`;
+
+    const res  = await fetch(url);
+    const lista = await res.json();
+    const tbody = document.getElementById('tablaPrestamos');
+    const sinEl = document.getElementById('sinPrestamos');
+    tbody.innerHTML = '';
+
+    if (!lista.length) { sinEl.classList.remove('hidden'); return; }
+    sinEl.classList.add('hidden');
+
+    lista.forEach(p => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-gray-50';
+        const estadoBadge = p.estado === 'PRESTADO'
+            ? '<span class="bg-orange-100 text-orange-700 text-xs px-2 py-0.5 rounded-full font-medium">Prestado</span>'
+            : '<span class="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-medium">Devuelto</span>';
+        const acciones = p.estado === 'PRESTADO'
+            ? `<button onclick="abrirModalDevolucion(${p.id_prestamo},'${p.nombre_elemento}','${p.nombre_socio}')"
+                     class="text-yellow-600 hover:text-yellow-800 text-xs border border-yellow-300 px-2 py-1 rounded">
+                 Registrar devolución
+               </button>`
+            : `<span class="text-gray-400 text-xs">${p.fecha_devolucion || '-'}</span>`;
+        tr.innerHTML = `
+            <td class="px-4 py-3">${p.nombre_elemento}</td>
+            <td class="px-4 py-3">${p.nombre_socio} <span class="text-gray-400 text-xs">#${p.numero_socio}</span></td>
+            <td class="px-4 py-3 text-gray-500">${p.dni_socio || '-'}</td>
+            <td class="px-4 py-3">${p.fecha_prestamo}</td>
+            <td class="px-4 py-3 text-gray-500">${p.fecha_devolucion || '-'}</td>
+            <td class="px-4 py-3 text-gray-500 max-w-xs truncate" title="${p.observaciones}">${p.observaciones || '-'}</td>
+            <td class="px-4 py-3">${estadoBadge}</td>
+            <td class="px-4 py-3">${acciones}</td>`;
+        tbody.appendChild(tr);
+    });
+}
+
+// ─── MODAL PRÉSTAMO ──────────────────────────────────────────
+function abrirModalPrestamo() {
+    document.getElementById('prError').classList.add('hidden');
+    document.getElementById('prSocioBusqueda').value = '';
+    document.getElementById('prSocioId').value = '';
+    document.getElementById('prSocioSeleccionado').classList.add('hidden');
+    document.getElementById('prSocioResultados').classList.add('hidden');
+    document.getElementById('prObservaciones').value = '';
+    document.getElementById('prFecha').value = hoy();
+    actualizarSelectPrestamo();
+    document.getElementById('modalPrestamo').classList.remove('hidden');
+}
+
+function cerrarModalPrestamo() {
+    document.getElementById('modalPrestamo').classList.add('hidden');
+}
+
+async function buscarSocioPrestamo() {
+    clearTimeout(busquedaTimer);
+    const q = document.getElementById('prSocioBusqueda').value.trim();
+    if (q.length < 2) { document.getElementById('prSocioResultados').classList.add('hidden'); return; }
+    busquedaTimer = setTimeout(async () => {
+        const res = await fetch(`/api/socios?estado=ACTIVO`);
+        const todos = await res.json();
+        const ql = q.toLowerCase();
+        const filtrados = todos.filter(s =>
+            s.nombre_completo.toLowerCase().includes(ql) ||
+            (s.dni && s.dni.includes(q))
+        ).slice(0, 8);
+        const cont = document.getElementById('prSocioResultados');
+        cont.innerHTML = '';
+        if (!filtrados.length) {
+            cont.innerHTML = '<p class="text-xs text-gray-400 px-3 py-2">Sin resultados</p>';
+        } else {
+            filtrados.forEach(s => {
+                const div = document.createElement('div');
+                div.className = 'px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm';
+                div.textContent = `${s.nombre_completo} — DNI: ${s.dni || '-'} (#${s.numero_socio})`;
+                div.onclick = () => seleccionarSocio(s);
+                cont.appendChild(div);
+            });
+        }
+        cont.classList.remove('hidden');
+    }, 250);
+}
+
+function seleccionarSocio(s) {
+    document.getElementById('prSocioId').value = s.id_socio;
+    document.getElementById('prSocioBusqueda').value = s.nombre_completo;
+    const lbl = document.getElementById('prSocioSeleccionado');
+    lbl.textContent = `Socio seleccionado: ${s.nombre_completo} (#${s.numero_socio})`;
+    lbl.classList.remove('hidden');
+    document.getElementById('prSocioResultados').classList.add('hidden');
+}
+
+async function guardarPrestamo() {
+    const errEl = document.getElementById('prError');
+    errEl.classList.add('hidden');
+    const idElemento = parseInt(document.getElementById('prElemento').value);
+    const idSocio    = parseInt(document.getElementById('prSocioId').value);
+    const fecha      = document.getElementById('prFecha').value;
+    const obs        = document.getElementById('prObservaciones').value.trim();
+
+    if (!idElemento) { errEl.textContent = 'Seleccione un elemento'; errEl.classList.remove('hidden'); return; }
+    if (!idSocio)    { errEl.textContent = 'Seleccione un socio';    errEl.classList.remove('hidden'); return; }
+    if (!fecha)      { errEl.textContent = 'Ingrese la fecha';       errEl.classList.remove('hidden'); return; }
+
+    const res = await fetch('/api/inventario/prestamos', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id_elemento: idElemento, id_socio: idSocio, fecha_prestamo: fecha, observaciones: obs })
+    });
+    const data = await res.json();
+    if (data.ok) {
+        cerrarModalPrestamo();
+        await cargarElementos();
+        await cargarPrestamos();
+    } else {
+        errEl.textContent = data.error || 'Error al registrar';
+        errEl.classList.remove('hidden');
+    }
+}
+
+// ─── MODAL DEVOLUCIÓN ────────────────────────────────────────
+function abrirModalDevolucion(id, elemento, socio) {
+    document.getElementById('devError').classList.add('hidden');
+    document.getElementById('devPrestamoId').value = id;
+    document.getElementById('devDetalle').textContent = `Elemento: ${elemento} — Socio: ${socio}`;
+    document.getElementById('devFecha').value = hoy();
+    document.getElementById('modalDevolucion').classList.remove('hidden');
+}
+
+function cerrarModalDevolucion() {
+    document.getElementById('modalDevolucion').classList.add('hidden');
+}
+
+async function confirmarDevolucion() {
+    const errEl = document.getElementById('devError');
+    errEl.classList.add('hidden');
+    const id    = document.getElementById('devPrestamoId').value;
+    const fecha = document.getElementById('devFecha').value;
+    if (!fecha) { errEl.textContent = 'Ingrese la fecha de devolución'; errEl.classList.remove('hidden'); return; }
+
+    const res = await fetch(`/api/inventario/prestamos/${id}/devolucion`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fecha_devolucion: fecha })
+    });
+    const data = await res.json();
+    if (data.ok) {
+        cerrarModalDevolucion();
+        await cargarElementos();
+        await cargarPrestamos();
+    } else {
+        errEl.textContent = data.error || 'Error al registrar devolución';
+        errEl.classList.remove('hidden');
+    }
+}
+</script>
+</body>
+</html>

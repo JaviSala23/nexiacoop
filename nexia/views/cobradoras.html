@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexia - Cobradoras</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex">
+<aside class="w-64 bg-blue-900 text-white flex flex-col min-h-screen fixed">
+    <div class="p-6 border-b border-blue-700"><h1 class="text-2xl font-bold">NEXIA</h1><p class="text-blue-300 text-xs">Gestión de Socios</p></div>
+    <nav class="flex-1 p-4 space-y-1">
+        <a href="/dashboard"  class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">🏠 Dashboard</a>
+        <a href="/socios"     class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">👥 Socios</a>
+        <a href="/cobradoras" class="flex items-center gap-3 px-4 py-2 rounded-lg bg-blue-700 font-medium">👩‍💼 Cobradoras</a>
+        <a href="/talones"    class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">🧾 Talones</a>
+        <a href="/pagos"      class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">💳 Pagos</a>
+        <a href="/padron"     class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">📋 Padrón</a>
+        <a href="/inventario" class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">🩼 Inventario</a>
+        <a href="/admin"      class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">⚙️ Admin</a>
+    </nav>
+    <div class="p-4 border-t border-blue-700"><button onclick="logout()" class="text-sm text-red-300 hover:text-red-200">Cerrar sesión</button></div>
+</aside>
+<main class="ml-64 flex-1 p-8">
+    <div class="flex items-center justify-between mb-6">
+        <h2 class="text-2xl font-bold text-blue-900">Cobradoras</h2>
+        <button onclick="abrirModal()" class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700">+ Nueva cobradora</button>
+    </div>
+    <div class="bg-white rounded-xl shadow overflow-hidden">
+        <table class="w-full text-sm">
+            <thead class="bg-blue-50 text-blue-800 font-semibold">
+                <tr>
+                    <th class="px-4 py-3 text-left">Nombre</th>
+                    <th class="px-4 py-3 text-left">Teléfono</th>
+                    <th class="px-4 py-3 text-left">Comisión %</th>
+                    <th class="px-4 py-3 text-left">Socios</th>
+                    <th class="px-4 py-3 text-left">Activa</th>
+                    <th class="px-4 py-3 text-left">Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="tablaCobradoras" class="divide-y divide-gray-100"></tbody>
+        </table>
+    </div>
+</main>
+<!-- Modal -->
+<div id="modal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center hidden z-50">
+    <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
+        <h3 id="modalTitulo" class="text-xl font-bold text-blue-800 mb-6">Nueva Cobradora</h3>
+        <div id="modalErr" class="hidden bg-red-100 text-red-700 rounded p-2 mb-4 text-sm"></div>
+        <div class="space-y-4">
+            <div><label class="text-sm text-gray-600">Nombre</label><input id="fNombre" class="w-full border rounded px-3 py-2 mt-1"></div>
+            <div><label class="text-sm text-gray-600">Teléfono</label><input id="fTelefono" class="w-full border rounded px-3 py-2 mt-1"></div>
+            <div><label class="text-sm text-gray-600">Comisión (%)</label><input id="fComision" type="number" step="0.01" class="w-full border rounded px-3 py-2 mt-1"></div>
+            <div class="flex items-center gap-2"><input id="fActiva" type="checkbox" checked><label class="text-sm text-gray-600">Activa</label></div>
+        </div>
+        <div class="flex justify-end gap-3 mt-6">
+            <button onclick="cerrarModal()" class="px-5 py-2 border rounded-lg text-gray-600 hover:bg-gray-50">Cancelar</button>
+            <button onclick="guardar()" class="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Guardar</button>
+        </div>
+    </div>
+</div>
+<script>
+let editId = null;
+async function logout() { await fetch('/api/auth/logout',{method:'POST'}); window.location.href='/login'; }
+async function cargar() {
+    const r = await fetch('/api/cobradoras'); const lista = await r.json();
+    const tbody = document.getElementById('tablaCobradoras');
+    tbody.innerHTML = lista.map(c=>`
+        <tr class="hover:bg-gray-50">
+            <td class="px-4 py-3 font-medium">${c.nombre}</td>
+            <td class="px-4 py-3">${c.telefono||'-'}</td>
+            <td class="px-4 py-3">${c.porcentaje_comision}%</td>
+            <td class="px-4 py-3">${c.cantidad_socios||0}</td>
+            <td class="px-4 py-3"><span class="px-2 py-1 rounded-full text-xs ${c.activa?'bg-green-100 text-green-700':'bg-gray-100 text-gray-500'}">${c.activa?'Sí':'No'}</span></td>
+            <td class="px-4 py-3 flex gap-2">
+                <button onclick="editar(${c.id_cobradora})" class="text-blue-600 hover:underline text-xs">Editar</button>
+                <button onclick="eliminar(${c.id_cobradora})" class="text-red-500 hover:underline text-xs">Eliminar</button>
+            </td>
+        </tr>`).join('') || '<tr><td colspan="6" class="text-center py-8 text-gray-400">No hay cobradoras</td></tr>';
+}
+function abrirModal() {
+    editId = null;
+    document.getElementById('modalTitulo').textContent = 'Nueva Cobradora';
+    document.getElementById('fNombre').value   = '';
+    document.getElementById('fTelefono').value = '';
+    document.getElementById('fComision').value = 0;
+    document.getElementById('fActiva').checked = true;
+    document.getElementById('modalErr').classList.add('hidden');
+    document.getElementById('modal').classList.remove('hidden');
+}
+async function editar(id) {
+    const r = await fetch('/api/cobradoras/'+id); const c = await r.json();
+    editId = id;
+    document.getElementById('modalTitulo').textContent = 'Editar Cobradora';
+    document.getElementById('fNombre').value   = c.nombre;
+    document.getElementById('fTelefono').value = c.telefono||'';
+    document.getElementById('fComision').value = c.porcentaje_comision;
+    document.getElementById('fActiva').checked = c.activa;
+    document.getElementById('modal').classList.remove('hidden');
+}
+function cerrarModal() { document.getElementById('modal').classList.add('hidden'); }
+async function guardar() {
+    const body = {
+        nombre: document.getElementById('fNombre').value,
+        telefono: document.getElementById('fTelefono').value,
+        porcentaje_comision: parseFloat(document.getElementById('fComision').value)||0,
+        activa: document.getElementById('fActiva').checked
+    };
+    const url = editId ? '/api/cobradoras/'+editId : '/api/cobradoras';
+    const method = editId ? 'PUT' : 'POST';
+    const r = await fetch(url, { method, headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+    const data = await r.json();
+    if (r.ok) { cerrarModal(); cargar(); }
+    else { const e = document.getElementById('modalErr'); e.textContent = data.error; e.classList.remove('hidden'); }
+}
+async function eliminar(id) {
+    if (!confirm('¿Eliminar cobradora? Esta acción no se puede deshacer.')) return;
+    const r = await fetch('/api/cobradoras/'+id, {method:'DELETE'});
+    if (r.ok) cargar(); else { const d = await r.json(); alert(d.error||'Error al eliminar'); }
+}
+cargar();
+</script>
+</body>
+</html>

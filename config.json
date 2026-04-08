@@ -1,0 +1,29 @@
+{
+    "listeners": [
+        {
+            "address": "0.0.0.0",
+            "port": 8848
+        }
+    ],
+    "app": {
+        "number_of_threads": 4,
+        "document_root": "./",
+        "home_page": "views/login.html",
+        "enable_session": true,
+        "session_timeout": 3600,
+        "client_max_body_size": "10M"
+    },
+    "db_clients": [
+        {
+            "rdbms": "mysql",
+            "host": "127.0.0.1",
+            "port": 3306,
+            "dbname": "JubiladoSurgentes",
+            "user": "root",
+            "passwd": "Celeste14",
+            "connection_number": 5,
+            "name": "main",
+            "auto_batch": false
+        }
+    ]
+}
