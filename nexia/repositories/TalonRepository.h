@@ -7,51 +7,41 @@
 
 class TalonRepository {
 public:
-    static void listar(
-        int mes, int anio, int idCobradora,
+    static void listar(int mes, int anio, int idConcepto,
         std::function<void(std::vector<Talon>)> callback,
         std::function<void(const std::string&)> errCallback);
 
-    static void buscarPorCodigo(
-        const std::string& codigo,
+    static void buscarPorCodigo(const std::string& codigo,
         std::function<void(Talon)> callback,
         std::function<void(const std::string&)> errCallback);
 
-    static void insertarBatch(
-        const std::vector<Talon>& talones,
+    static void insertar(const Talon& t,
+        std::function<void(int)> callback,
+        std::function<void(const std::string&)> errCallback);
+
+    static void insertarBatch(const std::vector<Talon>& talones,
         std::function<void()> callback,
         std::function<void(const std::string&)> errCallback);
 
-    static void marcarPagado(
-        int idTalon,
+    static void marcarPagado(int idTalon,
         std::function<void()> callback,
         std::function<void(const std::string&)> errCallback);
 
-    static void anular(
-        int idTalon,
+    static void anular(int idTalon,
         std::function<void()> callback,
         std::function<void(const std::string&)> errCallback);
 
-    static void existeMesAnio(
-        int mes, int anio,
+    static void existeMesAnioConcepto(int mes, int anio, int idConcepto,
         std::function<void(bool)> callback,
         std::function<void(const std::string&)> errCallback);
 
-    static void eliminarAnuladosMesAnio(
-        int mes, int anio,
+    static void eliminarAnuladosMesAnioConcepto(int mes, int anio, int idConcepto,
         std::function<void()> callback,
         std::function<void(const std::string&)> errCallback);
 
-    static void sociosConTalonActivo(
-        int mes, int anio,
-        const std::vector<int>& socioIds,
+    static void familiasConTalonActivo(int mes, int anio, int idConcepto,
+        const std::vector<int>& familiaIds,
         std::function<void(std::vector<int>)> callback,
-        std::function<void(const std::string&)> errCallback);
-
-    static void eliminarAnuladosDeSocios(
-        int mes, int anio,
-        const std::vector<int>& socioIds,
-        std::function<void()> callback,
         std::function<void(const std::string&)> errCallback);
 
     static void listarMorosos(

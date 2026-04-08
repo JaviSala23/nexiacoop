@@ -1,27 +1,29 @@
 #pragma once
 #include <vector>
 #include <functional>
-#include <json/json.h>
+#include <string>
 #include "../models/Talon.h"
-#include "../models/Socio.h"
-#include "../models/Parametro.h"
 
 class TalonService {
 public:
-    // Genera talones para todos los socios activos del mes/año indicado
-    static void generarMensual(
-        int mes, int anio,
+    // Genera talones mensuales para todas las familias activas
+    static void generarMensual(int mes, int anio,
         std::function<void(int cantGenerados)> callback,
         std::function<void(const std::string&)> errCallback);
 
-    // Genera talones solo para los socios indicados (por id_socio)
-    // Omite los que ya tienen talón activo para ese período
-    static void generarParaSocios(
-        int mes, int anio,
-        std::vector<int> socioIds,
+    // Genera talones de cuota mensual solo para las familias indicadas
+    static void generarParaFamilias(int mes, int anio,
+        std::vector<int> familiaIds,
         std::function<void(int cantGenerados)> callback,
         std::function<void(const std::string&)> errCallback);
 
-    // Genera el código de barras: SSSSSS-AAAA-MM-T
-    static std::string generarCodigoBarra(int numSocio, int anio, int mes, const std::string& tipo);
+    // Genera un talón de concepto extra para una familia específica
+    static void generarExtra(int idFamilia, int idConcepto, double monto,
+        const std::string& observaciones,
+        std::function<void(int idTalon)> callback,
+        std::function<void(const std::string&)> errCallback);
+
+    // Código de barra: FFFFFFAAAAMM_CONCEPTO (F=familia, A=anio, M=mes, C=id_concepto)
+    static std::string generarCodigoBarra(int numFamilia, int anio, int mes, int idConcepto);
 };
+

@@ -110,18 +110,16 @@ void AdminController::parametros(const drogon::HttpRequestPtr&,
     ParametroRepository::obtener(
         [callback](const Parametro& p) {
             Json::Value o;
-            o["id_parametro"]          = p.id_parametro;
-            o["cuota_simple"]          = p.cuota_simple;
-            o["cuota_con_responsable"] = p.cuota_con_responsable;
-            o["mes_cobranza"]          = p.mes_cobranza;
-            o["anio_cobranza"]         = p.anio_cobranza;
-            o["nombre_asociacion"]     = p.nombre_asociacion;
-            o["domicilio"]             = p.domicilio;
-            o["telefono"]              = p.telefono;
-            o["localidad"]             = p.localidad;
-            o["provincia"]             = p.provincia;
-            o["email"]                 = p.email;
-            o["logo_url"]              = p.logo_url;
+            o["id_parametro"]      = p.id_parametro;
+            o["mes_cobranza"]      = p.mes_cobranza;
+            o["anio_cobranza"]     = p.anio_cobranza;
+            o["nombre_institucion"]= p.nombre_institucion;
+            o["domicilio"]         = p.domicilio;
+            o["telefono"]          = p.telefono;
+            o["localidad"]         = p.localidad;
+            o["provincia"]         = p.provincia;
+            o["email"]             = p.email;
+            o["logo_url"]          = p.logo_url;
             callback(drogon::HttpResponse::newHttpJsonResponse(o));
         },
         [callback](const std::string& e) {
@@ -142,18 +140,16 @@ void AdminController::actualizarParam(const drogon::HttpRequestPtr& req,
         r->setStatusCode(drogon::k400BadRequest); callback(r); return;
     }
     Parametro p;
-    p.id_parametro          = (*body)["id_parametro"].asInt();
-    p.cuota_simple          = (*body)["cuota_simple"].asDouble();
-    p.cuota_con_responsable = (*body)["cuota_con_responsable"].asDouble();
-    p.mes_cobranza          = (*body)["mes_cobranza"].asInt();
-    p.anio_cobranza         = (*body)["anio_cobranza"].asInt();
-    p.nombre_asociacion     = (*body)["nombre_asociacion"].asString();
-    p.domicilio             = (*body)["domicilio"].asString();
-    p.telefono              = (*body)["telefono"].asString();
-    p.localidad             = (*body)["localidad"].asString();
-    p.provincia             = (*body)["provincia"].asString();
-    p.email                 = (*body)["email"].asString();
-    p.logo_url              = (*body)["logo_url"].asString();
+    p.id_parametro      = (*body)["id_parametro"].asInt();
+    p.mes_cobranza      = (*body)["mes_cobranza"].asInt();
+    p.anio_cobranza     = (*body)["anio_cobranza"].asInt();
+    p.nombre_institucion= (*body)["nombre_institucion"].asString();
+    p.domicilio         = (*body)["domicilio"].asString();
+    p.telefono          = (*body)["telefono"].asString();
+    p.localidad         = (*body)["localidad"].asString();
+    p.provincia         = (*body)["provincia"].asString();
+    p.email             = (*body)["email"].asString();
+    p.logo_url          = (*body)["logo_url"].asString();
     ParametroRepository::actualizar(p,
         [callback]() {
             Json::Value res; res["ok"] = true;

@@ -7,23 +7,19 @@
 
 class PagoRepository {
 public:
-    static void insertar(
-        const Pago& p,
+    static void insertar(const Pago& p,
         std::function<void(int)> callback,
         std::function<void(const std::string&)> errCallback);
 
-    static void listar(
-        int mes, int anio,
+    static void listar(int mes, int anio, int idConcepto,
         std::function<void(std::vector<Pago>)> callback,
         std::function<void(const std::string&)> errCallback);
 
-    static void resumenMes(
-        int anio,
+    static void resumenMes(int anio,
         std::function<void(Json::Value)> callback,
         std::function<void(const std::string&)> errCallback);
 
-    static void resumenCobradora(
-        int mes, int anio,
+    static void resumenMedioPago(int mes, int anio,
         std::function<void(Json::Value)> callback,
         std::function<void(const std::string&)> errCallback);
 };

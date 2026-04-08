@@ -1,125 +1,189 @@
 #include "TalonService.h"
-#include "../repositories/SocioRepository.h"
+#include "../repositories/FamiliaRepository.h"
 #include "../repositories/TalonRepository.h"
-#include "../repositories/ParametroRepository.h"
+#include "../repositories/ConceptoRepository.h"
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
 
-std::string TalonService::generarCodigoBarra(
-    int numSocio, int anio, int mes, const std::string& tipo)
+std::string TalonService::generarCodigoBarra(int numFamilia, int anio, int mes, int idConcepto)
 {
-    // Formato: SSSSSS-AAAA-MM-T  (S=número socio, T=1 simple, 2 con cargo)
+    // Formato: FFFFFF-AAAA-MM-CCC  (F=familia, A=año, M=mes, C=id_concepto)
+    // Solo dígitos internos — ningún dato de usuario
     std::ostringstream oss;
-    oss << std::setw(6) << std::setfill('0') << numSocio
+    oss << std::setw(6) << std::setfill('0') << numFamilia
         << std::setw(4) << std::setfill('0') << anio
         << std::setw(2) << std::setfill('0') << mes
-        << (tipo == "SIMPLE" ? "1" : "2");
+        << std::setw(3) << std::setfill('0') << idConcepto;
     return oss.str();
 }
 
-void TalonService::generarMensual(
-    int mes, int anio,
+// -------------------------------------------------------
+// Generar talones mensuales para todas las familias activas
+// -------------------------------------------------------
+void TalonService::generarMensual(int mes, int anio,
     std::function<void(int)> callback,
     std::function<void(const std::string&)> errCallback)
 {
-    // 1. Verificar que ya no existen talones activos para ese mes/año
-    TalonRepository::existeMesAnio(mes, anio,
-        [mes, anio, callback, errCallback](bool existe) {
-            if (existe) {
-                errCallback("Ya existen talones generados para " +
-                            std::to_string(mes) + "/" + std::to_string(anio));
-                return;
-            }
-            // 1b. Eliminar talones ANULADOS de ese mes/año (para liberar el código de barra)
-            TalonRepository::eliminarAnuladosMesAnio(mes, anio,
-              [mes, anio, callback, errCallback]() {
-            // 2. Obtener parámetros
-            ParametroRepository::obtener(
-                [mes, anio, callback, errCallback](const Parametro& param) {
-                    // 3. Obtener todos los socios activos
-                    SocioRepository::listar("ACTIVO", 0,
-                        [mes, anio, param, callback, errCallback](std::vector<Socio> socios) {
-                            if (socios.empty()) {
-                                errCallback("No hay socios activos");
-                                return;
-                            }
-                            std::vector<Talon> talones;
-                            for (const auto& s : socios) {
-                                // Saltar socios anexos (tienen socio principal)
-                                if (s.id_socio_principal > 0) continue;
-                                Talon t;
-                                t.id_socio     = s.id_socio;
-                                t.id_cobradora = s.id_cobradora; // 0 → NULL en DB
-                                t.mes          = mes;
-                                t.anio         = anio;
-                                t.tipo         = s.tiene_responsable ? "CON_CARGO" : "SIMPLE";
-                                // CON_CARGO = cuota socio + cuota responsable = cuota_simple * 2
-                                t.monto        = s.tiene_responsable
-                                                 ? param.cuota_simple * 2.0
-                                                 : param.cuota_simple;
-                                t.codigo_barra = TalonService::generarCodigoBarra(
-                                    s.numero_socio, anio, mes, t.tipo);
-                                talones.push_back(std::move(t));
-                            }
-                            int total = static_cast<int>(talones.size());
-                            TalonRepository::insertarBatch(talones,
-                                [total, callback]() { callback(total); },
+    // 1. Obtener concepto MENSUAL
+    ConceptoRepository::buscarMensual(
+        [mes, anio, callback, errCallback](const Concepto& concepto) {
+            int idConcepto = concepto.id_concepto;
+
+            // 2. Verificar que no haya talones activos para ese mes/año
+            TalonRepository::existeMesAnioConcepto(mes, anio, idConcepto,
+                [mes, anio, idConcepto, callback, errCallback](bool existe) {
+                    if (existe) {
+                        errCallback("Ya existen cuotas mensuales generadas para " +
+                                    std::to_string(mes) + "/" + std::to_string(anio));
+                        return;
+                    }
+                    // 3. Limpiar anulados previos del mismo período
+                    TalonRepository::eliminarAnuladosMesAnioConcepto(mes, anio, idConcepto,
+                        [mes, anio, idConcepto, callback, errCallback]() {
+                            // 4. Listar familias activas
+                            FamiliaRepository::listar("ACTIVA",
+                                [mes, anio, idConcepto, callback, errCallback](std::vector<Familia> familias) {
+                                    if (familias.empty()) {
+                                        errCallback("No hay familias activas");
+                                        return;
+                                    }
+                                    // 5. Para cada familia, calcular cuota según cantidad de alumnos
+                                    // Uso un contador recursivo para procesar una familia a la vez
+                                    auto talones = std::make_shared<std::vector<Talon>>();
+                                    auto idx = std::make_shared<size_t>(0);
+                                    auto total = familias.size();
+
+                                    std::function<void()> procesarSiguiente;
+                                    procesarSiguiente = [&procesarSiguiente, mes, anio, idConcepto, familias, talones, idx, total, callback, errCallback]() mutable {
+                                        if (*idx >= total) {
+                                            // Insertar batch
+                                            int cnt = static_cast<int>(talones->size());
+                                            TalonRepository::insertarBatch(*talones,
+                                                [cnt, callback]() { callback(cnt); },
+                                                errCallback);
+                                            return;
+                                        }
+                                        const Familia& fam = familias[*idx];
+                                        (*idx)++;
+                                        int cantAlumnos = fam.cantidad_alumnos;
+                                        if (cantAlumnos <= 0) {
+                                            // Sin alumnos activos → omitir
+                                            procesarSiguiente();
+                                            return;
+                                        }
+                                        ConceptoRepository::obtenerMontoPorHijos(cantAlumnos,
+                                            [mes, anio, idConcepto, fam, talones, procesarSiguiente, errCallback](double monto) mutable {
+                                                Talon t;
+                                                t.id_familia  = fam.id_familia;
+                                                t.id_concepto = idConcepto;
+                                                t.mes         = mes;
+                                                t.anio        = anio;
+                                                t.monto       = monto;
+                                                t.codigo_barra = TalonService::generarCodigoBarra(
+                                                    fam.numero_familia, anio, mes, idConcepto);
+                                                talones->push_back(std::move(t));
+                                                procesarSiguiente();
+                                            },
+                                            [errCallback](const std::string& e) { errCallback(e); });
+                                    };
+                                    procesarSiguiente();
+                                },
                                 errCallback);
                         },
                         errCallback);
                 },
                 errCallback);
-              },  // cierre lambda eliminarAnuladosMesAnio
-              errCallback);
         },
         errCallback);
 }
 
-void TalonService::generarParaSocios(
-    int mes, int anio,
-    std::vector<int> socioIds,
+// -------------------------------------------------------
+// Generar para familias específicas
+// -------------------------------------------------------
+void TalonService::generarParaFamilias(int mes, int anio,
+    std::vector<int> familiaIds,
     std::function<void(int)> callback,
     std::function<void(const std::string&)> errCallback)
 {
-    // 1. Eliminar anulados de esos socios para liberar el código de barra
-    TalonRepository::eliminarAnuladosDeSocios(mes, anio, socioIds,
-      [mes, anio, socioIds, callback, errCallback]() {
-        // 2. Ver cuáles ya tienen talón activo
-        TalonRepository::sociosConTalonActivo(mes, anio, socioIds,
-          [mes, anio, socioIds, callback, errCallback](std::vector<int> yaGenerados) {
-            // 3. Parámetros
-            ParametroRepository::obtener(
-              [mes, anio, socioIds, yaGenerados, callback, errCallback](const Parametro& param) {
-                // 4. Socios activos
-                SocioRepository::listar("ACTIVO", 0,
-                  [mes, anio, socioIds, yaGenerados, param, callback, errCallback](std::vector<Socio> socios) {
-                    std::vector<Talon> talones;
-                    for (const auto& s : socios) {
-                        bool pedido = std::find(socioIds.begin(), socioIds.end(), s.id_socio) != socioIds.end();
-                        bool existe = std::find(yaGenerados.begin(), yaGenerados.end(), s.id_socio) != yaGenerados.end();
-                        // Saltar anexos (tienen socio principal)
-                        if (!pedido || existe || s.id_socio_principal > 0) continue;
-                        Talon t;
-                        t.id_socio     = s.id_socio;
-                        t.id_cobradora = s.id_cobradora;
-                        t.mes = mes; t.anio = anio;
-                        t.tipo  = s.tiene_responsable ? "CON_CARGO" : "SIMPLE";
-                        t.monto = s.tiene_responsable ? param.cuota_simple * 2.0 : param.cuota_simple;
-                        t.codigo_barra = TalonService::generarCodigoBarra(s.numero_socio, anio, mes, t.tipo);
-                        talones.push_back(std::move(t));
-                    }
-                    if (talones.empty()) {
-                        errCallback("Todos los socios seleccionados ya tienen talón activo para ese período");
-                        return;
-                    }
-                    int total = static_cast<int>(talones.size());
-                    TalonRepository::insertarBatch(talones,
-                        [total, callback]() { callback(total); },
-                        errCallback);
-                  },
-                  errCallback);
-              }, errCallback);
-          }, errCallback);
-      }, errCallback);
+    ConceptoRepository::buscarMensual(
+        [mes, anio, familiaIds, callback, errCallback](const Concepto& concepto) {
+            int idConcepto = concepto.id_concepto;
+            TalonRepository::familiasConTalonActivo(mes, anio, idConcepto, familiaIds,
+                [mes, anio, idConcepto, familiaIds, callback, errCallback](std::vector<int> yaGenerados) {
+                    FamiliaRepository::listar("ACTIVA",
+                        [mes, anio, idConcepto, familiaIds, yaGenerados, callback, errCallback](std::vector<Familia> familias) {
+                            auto talones = std::make_shared<std::vector<Talon>>();
+                            auto lista = std::make_shared<std::vector<Familia>>();
+                            for (const auto& f : familias) {
+                                bool pedida = std::find(familiaIds.begin(), familiaIds.end(), f.id_familia) != familiaIds.end();
+                                bool existe  = std::find(yaGenerados.begin(), yaGenerados.end(), f.id_familia) != yaGenerados.end();
+                                if (pedida && !existe && f.cantidad_alumnos > 0)
+                                    lista->push_back(f);
+                            }
+                            if (lista->empty()) { callback(0); return; }
+
+                            auto idx = std::make_shared<size_t>(0);
+                            auto total = lista->size();
+                            std::function<void()> proc;
+                            proc = [&proc, mes, anio, idConcepto, lista, talones, idx, total, callback, errCallback]() mutable {
+                                if (*idx >= total) {
+                                    int cnt = static_cast<int>(talones->size());
+                                    TalonRepository::insertarBatch(*talones,
+                                        [cnt, callback]() { callback(cnt); }, errCallback);
+                                    return;
+                                }
+                                const Familia& fam = (*lista)[*idx];
+                                (*idx)++;
+                                ConceptoRepository::obtenerMontoPorHijos(fam.cantidad_alumnos,
+                                    [mes, anio, idConcepto, fam, talones, proc, errCallback](double monto) mutable {
+                                        Talon t;
+                                        t.id_familia  = fam.id_familia;
+                                        t.id_concepto = idConcepto;
+                                        t.mes  = mes;
+                                        t.anio = anio;
+                                        t.monto       = monto;
+                                        t.codigo_barra = TalonService::generarCodigoBarra(
+                                            fam.numero_familia, anio, mes, idConcepto);
+                                        talones->push_back(std::move(t));
+                                        proc();
+                                    }, errCallback);
+                            };
+                            proc();
+                        }, errCallback);
+                }, errCallback);
+        }, errCallback);
+}
+
+// -------------------------------------------------------
+// Generar talón de concepto EXTRA para una familia
+// -------------------------------------------------------
+void TalonService::generarExtra(int idFamilia, int idConcepto, double monto,
+    const std::string& observaciones,
+    std::function<void(int)> callback,
+    std::function<void(const std::string&)> errCallback)
+{
+    FamiliaRepository::buscarPorId(idFamilia,
+        [idConcepto, monto, observaciones, callback, errCallback](const Familia& fam) {
+            // Código de barra único: familia + concepto + timestamp (truncado a segundos)
+            auto now = std::chrono::system_clock::now();
+            auto ts  = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count();
+            std::ostringstream oss;
+            oss << std::setw(6) << std::setfill('0') << fam.numero_familia
+                << std::setw(3) << std::setfill('0') << idConcepto
+                << (ts % 100000000LL); // 8 dígitos del timestamp
+            std::string codigo = oss.str();
+
+            Talon t;
+            t.id_familia   = fam.id_familia;
+            t.id_concepto  = idConcepto;
+            t.mes          = 0; // sin mes específico para extras
+            t.anio         = 0;
+            t.monto        = monto;
+            t.codigo_barra = codigo;
+            t.observaciones = observaciones;
+
+            TalonRepository::insertar(t, callback, errCallback);
+        },
+        errCallback);
 }
