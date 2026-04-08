@@ -138,7 +138,7 @@
         <div class="space-y-4">
             <div>
                 <label class="text-xs text-gray-500">Cuenta *</label>
-                <select id="movCuenta" class="mt-1 w-full border rounded px-3 py-2 text-sm"></select>
+                <select id="movCuenta" onchange="cuentaChanged()" class="mt-1 w-full border rounded px-3 py-2 text-sm"></select>
             </div>
             <div>
                 <label class="text-xs text-gray-500">Fecha *</label>
@@ -155,10 +155,11 @@
                 </div>
                 <div>
                     <label class="text-xs text-gray-500">Tipo</label>
-                    <select id="movTipo" class="mt-1 w-full border rounded px-3 py-2 text-sm">
+                    <select id="movTipo" disabled class="mt-1 w-full border rounded px-3 py-2 text-sm bg-gray-50 text-gray-500">
                         <option value="EGRESO">Egreso</option>
                         <option value="INGRESO">Ingreso</option>
                     </select>
+                    <p class="text-xs text-gray-400 mt-0.5">Se toma del plan de cuentas</p>
                 </div>
             </div>
             <div>
@@ -351,10 +352,18 @@ function abrirModalMovimiento() {
     document.getElementById('movFecha').value = new Date().toISOString().slice(0,10);
     document.getElementById('movDesc').value = '';
     document.getElementById('movMonto').value = '';
-    document.getElementById('movTipo').value = 'EGRESO';
     document.getElementById('movMedio').value = 'EFECTIVO';
     document.getElementById('movError').classList.add('hidden');
     document.getElementById('modalMovimiento').classList.remove('hidden');
+    cuentaChanged(); // setear tipo desde la primera cuenta disponible
+}
+
+function cuentaChanged() {
+    const id = parseInt(document.getElementById('movCuenta').value);
+    const cuenta = cuentasCache.find(c => c.id_cuenta === id);
+    if (cuenta) {
+        document.getElementById('movTipo').value = cuenta.tipo;
+    }
 }
 
 async function guardarMovimiento() {

@@ -7,7 +7,7 @@
 
 class TalonRepository {
 public:
-    static void listar(int mes, int anio, int idConcepto,
+    static void listar(int mes, int anio, int idConcepto, bool soloExtras,
         std::function<void(std::vector<Talon>)> callback,
         std::function<void(const std::string&)> errCallback);
 

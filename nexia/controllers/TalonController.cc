@@ -40,8 +40,9 @@ void TalonController::listar(const drogon::HttpRequestPtr& req,
     auto m = req->getParameter("mes");       if (!m.empty()) mes = std::stoi(m);
     auto a = req->getParameter("anio");      if (!a.empty()) anio = std::stoi(a);
     auto c = req->getParameter("id_concepto"); if (!c.empty()) idConcepto = std::stoi(c);
+    bool soloExtras = req->getParameter("extras") == "1";
 
-    TalonRepository::listar(mes, anio, idConcepto,
+    TalonRepository::listar(mes, anio, idConcepto, soloExtras,
         [callback](std::vector<Talon> lista) {
             Json::Value arr(Json::arrayValue);
             for (const auto& t : lista) arr.append(talonToJson(t));

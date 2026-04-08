@@ -8,10 +8,7 @@
 </head>
 <body class="bg-gray-100 min-h-screen flex">
 <aside class="w-64 bg-blue-900 text-white flex flex-col min-h-screen fixed">
-    <div class="p-6 border-b border-blue-700">
-        <h1 class="text-2xl font-bold">NEXIA</h1>
-        <p class="text-blue-300 text-xs mt-1">Cooperadora Escolar</p>
-    </div>
+    <div class="p-6 border-b border-blue-700"><h1 class="text-2xl font-bold">NEXIA</h1><p class="text-blue-300 text-xs mt-1">Cooperadora Escolar</p></div>
     <nav class="flex-1 p-4 space-y-1">
         <a href="/dashboard"    class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">&#127968; Dashboard</a>
         <a href="/familias"     class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">&#128106; Familias</a>
@@ -26,106 +23,443 @@
         <button onclick="logout()" class="mt-2 w-full text-left text-sm text-red-300 hover:text-red-200">Cerrar sesion</button>
     </div>
 </aside>
-<main class="ml-64 flex-1 p-8">
-    <h2 class="text-2xl font-bold text-blue-900 mb-6">Pagos</h2>
 
-    <!-- Registrar pago -->
-    <div class="bg-white rounded-xl shadow p-6 mb-6">
-        <h3 class="font-semibold text-gray-700 mb-4">Registrar cobro por codigo de barra</h3>
-        <div class="flex flex-wrap gap-4 items-end">
-            <div class="flex-1 min-w-48">
-                <label class="text-xs text-gray-500">Codigo de barra</label>
-                <input id="codigoBarra" type="text" class="mt-1 w-full border rounded px-3 py-2 font-mono" placeholder="Scan o ingresar manualmente" autofocus>
+<main class="ml-64 flex-1 p-8">
+    <h2 class="text-2xl font-bold text-blue-900 mb-4">Pagos</h2>
+
+    <!-- Tabs -->
+    <div class="flex gap-1 mb-6 border-b border-gray-200">
+        <button onclick="mostrarTab('cobro')"    id="tab-cobro"    class="pb-3 px-4 text-blue-700 border-b-2 border-blue-700 font-medium text-sm">&#9654; Cobro r&aacute;pido</button>
+        <button onclick="mostrarTab('listado')"  id="tab-listado"  class="pb-3 px-4 text-gray-500 hover:text-gray-700 text-sm">&#9745; Cobro por listado</button>
+        <button onclick="mostrarTab('morosos')"  id="tab-morosos"  class="pb-3 px-4 text-gray-500 hover:text-gray-700 text-sm">&#128680; Morosos</button>
+        <button onclick="mostrarTab('historial')" id="tab-historial" class="pb-3 px-4 text-gray-500 hover:text-gray-700 text-sm">&#128196; Historial</button>
+    </div>
+
+    <!-- ===== TAB: COBRO RÁPIDO ===== -->
+    <div id="tab-cobro-content">
+        <div class="bg-white rounded-xl shadow p-6 mb-4">
+            <p class="text-sm text-gray-500 mb-4">Escane&aacute; o ingres&aacute; el c&oacute;digo de barra del tal&oacute;n y pres&oacute; <b>Enter</b>.</p>
+            <div class="flex flex-wrap gap-4 items-end">
+                <div class="flex-1 min-w-48">
+                    <label class="text-xs text-gray-500">C&oacute;digo de barra</label>
+                    <input id="codigoBarra" type="text" class="mt-1 w-full border rounded px-3 py-2 font-mono text-lg" placeholder="Scan o ingresar..." autofocus>
+                </div>
+                <div>
+                    <label class="text-xs text-gray-500">Medio de pago</label>
+                    <select id="medioPago" class="mt-1 border rounded px-3 py-2 text-sm">
+                        <option value="EFECTIVO">Efectivo</option>
+                        <option value="TRANSFERENCIA">Transferencia</option>
+                        <option value="MERCADOPAGO">Mercado Pago</option>
+                        <option value="OTRO">Otro</option>
+                    </select>
+                </div>
+                <div class="flex-1 min-w-40">
+                    <label class="text-xs text-gray-500">Observaciones</label>
+                    <input id="obsInput" type="text" class="mt-1 w-full border rounded px-3 py-2 text-sm">
+                </div>
+                <button onclick="registrarPagoRapido()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium">Registrar</button>
             </div>
+            <div id="pagoMsg" class="mt-3 text-sm hidden"></div>
+        </div>
+    </div>
+
+    <!-- ===== TAB: COBRO POR LISTADO ===== -->
+    <div id="tab-listado-content" class="hidden">
+        <div class="bg-white rounded-xl shadow p-4 mb-4 flex flex-wrap gap-4 items-end">
             <div>
-                <label class="text-xs text-gray-500">Medio de pago</label>
-                <select id="medioPago" class="mt-1 border rounded px-3 py-2 text-sm">
-                    <option value="EFECTIVO">Efectivo</option>
-                    <option value="TRANSFERENCIA">Transferencia</option>
-                    <option value="MERCADOPAGO">Mercado Pago</option>
-                    <option value="OTRO">Otro</option>
+                <label class="text-xs text-gray-500">Mes</label>
+                <select id="listMes" class="mt-1 border rounded px-3 py-2 text-sm">
+                    <option value="">Todos</option>
+                    <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
+                    <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
+                    <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
+                    <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
                 </select>
             </div>
-            <div class="flex-1 min-w-40">
-                <label class="text-xs text-gray-500">Observaciones</label>
-                <input id="obsInput" type="text" class="mt-1 w-full border rounded px-3 py-2 text-sm">
+            <div>
+                <label class="text-xs text-gray-500">A&ntilde;o</label>
+                <input id="listAnio" type="number" class="mt-1 border rounded px-3 py-2 text-sm w-24">
             </div>
-            <button onclick="registrarPago()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium">Registrar</button>
+            <div>
+                <label class="text-xs text-gray-500">Concepto</label>
+                <select id="listConcepto" class="mt-1 border rounded px-3 py-2 text-sm">
+                    <option value="">Todos</option>
+                </select>
+            </div>
+            <div>
+                <label class="text-xs text-gray-500">Buscar familia / tutor</label>
+                <input id="listBuscar" type="text" placeholder="Nombre o Nro familia" class="mt-1 border rounded px-3 py-2 text-sm w-44" oninput="filtrarTablaListado()">
+            </div>
+            <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer mt-4">
+                <input type="checkbox" id="inclExtras" class="w-4 h-4">
+                Incluir extras
+            </label>
+            <button onclick="cargarListadoTalones()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg text-sm font-medium">Buscar</button>
+            <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer mt-4">
+                <input type="checkbox" id="selTodosListado" onchange="toggleSelTodos(this.checked)">
+                Sel. todos
+            </label>
         </div>
-        <div id="pagoMsg" class="mt-3 text-sm hidden"></div>
+
+        <div class="bg-white rounded-xl shadow overflow-hidden mb-4">
+            <table class="w-full text-sm">
+                <thead class="bg-blue-50 text-blue-800">
+                    <tr>
+                        <th class="px-3 py-3 w-8"></th>
+                        <th class="px-4 py-3 text-left">Fam.</th>
+                        <th class="px-4 py-3 text-left">Tutor</th>
+                        <th class="px-4 py-3 text-left">Concepto</th>
+                        <th class="px-4 py-3 text-left">Per&iacute;odo</th>
+                        <th class="px-4 py-3 text-right">Monto</th>
+                        <th class="px-4 py-3 text-left">Tipo</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaListadoTalones" class="divide-y divide-gray-100"></tbody>
+            </table>
+            <p id="sinListado" class="text-center text-gray-400 py-8">Aplic&aacute; un filtro para ver los talones</p>
+        </div>
+
+        <!-- Barra acción fija -->
+        <div class="sticky bottom-4 bg-white border border-blue-200 rounded-xl shadow-lg p-4 flex flex-wrap gap-4 items-center justify-between">
+            <div class="text-sm text-gray-700">
+                <span id="resSelCount" class="font-bold text-blue-700">0</span> seleccionado(s) &mdash;
+                Total: <span id="resTotalMonto" class="font-bold text-green-700">$0</span>
+            </div>
+            <div class="flex gap-3 items-center flex-wrap">
+                <div>
+                    <label class="text-xs text-gray-500 mr-1">Medio de pago</label>
+                    <select id="listMedioPago" class="border rounded px-3 py-2 text-sm">
+                        <option value="EFECTIVO">Efectivo</option>
+                        <option value="TRANSFERENCIA">Transferencia</option>
+                        <option value="MERCADOPAGO">Mercado Pago</option>
+                        <option value="OTRO">Otro</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs text-gray-500 mr-1">Observaciones</label>
+                    <input id="listObs" type="text" class="border rounded px-3 py-2 text-sm w-40">
+                </div>
+                <button onclick="registrarPagosListado()" id="btnRegistrarListado" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium">Registrar pagos</button>
+            </div>
+            <div id="listMsg" class="w-full text-sm hidden"></div>
+        </div>
     </div>
 
-    <!-- Filtros y lista -->
-    <div class="bg-white rounded-xl shadow p-4 mb-4 flex flex-wrap gap-4 items-end">
-        <div>
-            <label class="text-xs text-gray-500">Mes</label>
-            <select id="filtroMes" class="mt-1 border rounded px-3 py-2 text-sm">
-                <option value="">Todos</option>
-                <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
-                <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
-                <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
-                <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
-            </select>
+    <!-- ===== TAB: MOROSOS ===== -->
+    <div id="tab-morosos-content" class="hidden">
+        <div class="flex justify-between items-center mb-4">
+            <p class="text-sm text-gray-500">Familias con cuotas impagas de <b>meses anteriores</b>. Ordenadas por deuda total.</p>
+            <button onclick="cargarMorosos()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium">&#8635; Actualizar</button>
         </div>
-        <div>
-            <label class="text-xs text-gray-500">Anio</label>
-            <input id="filtroAnio" type="number" class="mt-1 border rounded px-3 py-2 text-sm w-24">
+
+        <!-- Resumen -->
+        <div id="resumenMorosos" class="grid grid-cols-3 gap-4 mb-6"></div>
+
+        <!-- Tabla morosos -->
+        <div class="bg-white rounded-xl shadow overflow-hidden mb-4">
+            <table class="w-full text-sm">
+                <thead class="bg-red-50 text-red-800">
+                    <tr>
+                        <th class="px-4 py-3 text-left">Fam.</th>
+                        <th class="px-4 py-3 text-left">Tutor / Responsable</th>
+                        <th class="px-4 py-3 text-left">Tel&eacute;fono</th>
+                        <th class="px-4 py-3 text-center">Cuotas adeudadas</th>
+                        <th class="px-4 py-3 text-right">Deuda total</th>
+                        <th class="px-4 py-3 text-left">Desde</th>
+                        <th class="px-4 py-3 text-left">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaMorosos" class="divide-y divide-gray-100"></tbody>
+            </table>
+            <p id="sinMorosos" class="text-center text-gray-400 py-8 hidden">No hay morosos registrados &#127881;</p>
         </div>
-        <button onclick="cargarPagos()" class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded text-sm">Filtrar</button>
-        <button onclick="cargarResumenMedio()" class="bg-blue-100 hover:bg-blue-200 text-blue-800 px-4 py-2 rounded text-sm">Ver resumen por medio</button>
     </div>
 
-    <!-- Resumen medios -->
-    <div id="resumenMedios" class="grid grid-cols-4 gap-4 mb-4 hidden"></div>
-
-    <div class="bg-white rounded-xl shadow overflow-hidden">
-        <table class="w-full text-sm">
-            <thead class="bg-blue-50 text-blue-800">
-                <tr>
-                    <th class="px-4 py-3 text-left">Familia</th>
-                    <th class="px-4 py-3 text-left">Tutor</th>
-                    <th class="px-4 py-3 text-left">Concepto</th>
-                    <th class="px-4 py-3 text-left">Fecha</th>
-                    <th class="px-4 py-3 text-left">Medio</th>
-                    <th class="px-4 py-3 text-right">Monto</th>
-                    <th class="px-4 py-3 text-left">Obs</th>
-                </tr>
-            </thead>
-            <tbody id="tablaPagos" class="divide-y divide-gray-100"></tbody>
-        </table>
-        <p id="sinPagos" class="text-center text-gray-400 py-8 hidden">Sin pagos para el periodo seleccionado</p>
+    <!-- ===== TAB: HISTORIAL ===== -->
+    <div id="tab-historial-content" class="hidden">
+        <div class="bg-white rounded-xl shadow p-4 mb-4 flex flex-wrap gap-4 items-end">
+            <div>
+                <label class="text-xs text-gray-500">Mes</label>
+                <select id="histMes" class="mt-1 border rounded px-3 py-2 text-sm">
+                    <option value="">Todos</option>
+                    <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
+                    <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
+                    <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
+                    <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+                </select>
+            </div>
+            <div>
+                <label class="text-xs text-gray-500">A&ntilde;o</label>
+                <input id="histAnio" type="number" class="mt-1 border rounded px-3 py-2 text-sm w-24">
+            </div>
+            <button onclick="cargarPagos()" class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded text-sm">Filtrar</button>
+            <button onclick="cargarResumenMedio()" class="bg-blue-100 hover:bg-blue-200 text-blue-800 px-4 py-2 rounded text-sm">Ver resumen por medio</button>
+        </div>
+        <div id="resumenMedios" class="grid grid-cols-4 gap-4 mb-4 hidden"></div>
+        <div class="bg-white rounded-xl shadow overflow-hidden">
+            <table class="w-full text-sm">
+                <thead class="bg-blue-50 text-blue-800">
+                    <tr>
+                        <th class="px-4 py-3 text-left">Familia</th>
+                        <th class="px-4 py-3 text-left">Tutor</th>
+                        <th class="px-4 py-3 text-left">Concepto</th>
+                        <th class="px-4 py-3 text-left">Fecha</th>
+                        <th class="px-4 py-3 text-left">Medio</th>
+                        <th class="px-4 py-3 text-right">Monto</th>
+                        <th class="px-4 py-3 text-left">Obs</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaPagos" class="divide-y divide-gray-100"></tbody>
+            </table>
+            <p id="sinPagos" class="text-center text-gray-400 py-8 hidden">Sin pagos para el periodo seleccionado</p>
+        </div>
     </div>
 </main>
+
 <script>
+const mesesCortos=['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+let talonesListado=[];
+
 async function logout(){await fetch('/api/auth/logout',{method:'POST'});window.location.href='/login';}
+
 fetch('/api/auth/me').then(r=>r.json()).then(u=>{
     if(!u.id){window.location.href='/login';return;}
     document.getElementById('userInfo').textContent=u.nombre+' ('+u.rol+')';
     const ahora=new Date();
-    document.getElementById('filtroMes').value=ahora.getMonth()+1;
-    document.getElementById('filtroAnio').value=ahora.getFullYear();
-    cargarPagos();
-    document.getElementById('codigoBarra').addEventListener('keydown', e=>{if(e.key==='Enter')registrarPago();});
+    const mes=ahora.getMonth()+1, anio=ahora.getFullYear();
+    ['listMes','histMes'].forEach(id=>document.getElementById(id).value=mes);
+    ['listAnio','histAnio'].forEach(id=>document.getElementById(id).value=anio);
+    document.getElementById('codigoBarra').addEventListener('keydown',e=>{if(e.key==='Enter')registrarPagoRapido();});
+    cargarConceptosListado();
 });
-async function registrarPago(){
+
+function mostrarTab(tab){
+    ['cobro','listado','morosos','historial'].forEach(t=>{
+        document.getElementById('tab-'+t+'-content').classList.add('hidden');
+        document.getElementById('tab-'+t).className='pb-3 px-4 text-gray-500 hover:text-gray-700 text-sm';
+    });
+    document.getElementById('tab-'+tab+'-content').classList.remove('hidden');
+    document.getElementById('tab-'+tab).className='pb-3 px-4 text-blue-700 border-b-2 border-blue-700 font-medium text-sm';
+    if(tab==='historial') cargarPagos();
+    if(tab==='morosos')   cargarMorosos();
+}
+
+// ======= COBRO RÁPIDO =======
+async function registrarPagoRapido(){
     const codigo=document.getElementById('codigoBarra').value.trim();
     const medio=document.getElementById('medioPago').value;
     const obs=document.getElementById('obsInput').value.trim();
     const msgEl=document.getElementById('pagoMsg');
-    if(!codigo){msgEl.textContent='Ingrese el codigo de barra';msgEl.className='mt-3 text-sm text-red-600';msgEl.classList.remove('hidden');return;}
+    if(!codigo){msgEl.textContent='Ingrese el código de barra';msgEl.className='mt-3 text-sm text-red-600';msgEl.classList.remove('hidden');return;}
     const res=await fetch('/api/pagos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({codigo_barra:codigo,medio_pago:medio,observaciones:obs})});
     const data=await res.json();
     if(!res.ok){msgEl.textContent=data.error||'Error al registrar';msgEl.className='mt-3 text-sm text-red-600';msgEl.classList.remove('hidden');return;}
-    msgEl.textContent='Pago registrado correctamente';
+    msgEl.textContent='✓ Pago registrado — Familia: '+data.numero_familia+' | '+data.nombre_concepto;
     msgEl.className='mt-3 text-sm text-green-700 font-semibold';msgEl.classList.remove('hidden');
     document.getElementById('codigoBarra').value='';document.getElementById('obsInput').value='';
     document.getElementById('codigoBarra').focus();
-    cargarPagos();
-    setTimeout(()=>msgEl.classList.add('hidden'),3000);
+    setTimeout(()=>msgEl.classList.add('hidden'),4000);
 }
+
+// ======= COBRO POR LISTADO =======
+async function cargarConceptosListado(){
+    const conceptos=await fetch('/api/conceptos').then(r=>r.json());
+    const sel=document.getElementById('listConcepto');
+    sel.innerHTML='<option value="">Todos</option>';
+    (conceptos||[]).filter(c=>c.activo).forEach(c=>{
+        sel.innerHTML+=`<option value="${c.id_concepto}">${c.nombre}</option>`;
+    });
+}
+
+async function cargarListadoTalones(){
+    const mes=document.getElementById('listMes').value;
+    const anio=document.getElementById('listAnio').value;
+    const conc=document.getElementById('listConcepto').value;
+    const inclExtras=document.getElementById('inclExtras').checked;
+
+    // Construir param para cuotas mensuales
+    const p=new URLSearchParams();
+    if(mes)p.set('mes',mes);
+    if(anio)p.set('anio',anio);
+    if(conc)p.set('id_concepto',conc);
+
+    // Fetch cuotas mensuales (y opcionalmente extras)
+    const promises=[fetch('/api/talones?'+p).then(r=>r.json())];
+    if(inclExtras){
+        const pe=new URLSearchParams();
+        pe.set('extras','1');
+        if(conc)pe.set('id_concepto',conc);
+        promises.push(fetch('/api/talones?'+pe).then(r=>r.json()));
+    }
+
+    const resultados=await Promise.all(promises);
+    let todos=[];
+    resultados.forEach(d=>{if(Array.isArray(d))todos=todos.concat(d);});
+    // Solo GENERADO
+    talonesListado=todos.filter(t=>t.estado==='GENERADO');
+    document.getElementById('selTodosListado').checked=false;
+    const q=document.getElementById('listBuscar').value.toLowerCase();
+    renderListadoTalones(q?talonesListado.filter(t=>
+        String(t.numero_familia).includes(q)||(t.nombre_tutor_principal||'').toLowerCase().includes(q)
+    ):talonesListado);
+    actualizarBarra();
+}
+
+function filtrarTablaListado(){
+    const q=document.getElementById('listBuscar').value.toLowerCase();
+    if(!q){renderListadoTalones(talonesListado);return;}
+    renderListadoTalones(talonesListado.filter(t=>
+        String(t.numero_familia).includes(q)||(t.nombre_tutor_principal||'').toLowerCase().includes(q)
+    ));
+}
+
+function renderListadoTalones(lista){
+    const tbody=document.getElementById('tablaListadoTalones');
+    const sinEl=document.getElementById('sinListado');
+    tbody.innerHTML='';
+    if(!lista.length){sinEl.classList.remove('hidden');return;}
+    sinEl.classList.add('hidden');
+    lista.forEach(t=>{
+        const esExtra=(!t.mes||t.mes===0);
+        const periodo=esExtra?'Extra':(mesesCortos[t.mes]+' '+t.anio);
+        const monto=Number(t.monto).toLocaleString('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0});
+        const badge=esExtra
+            ?'<span class="px-2 py-0.5 rounded-full text-xs bg-purple-100 text-purple-700">EXTRA</span>'
+            :'<span class="px-2 py-0.5 rounded-full text-xs bg-yellow-100 text-yellow-700">CUOTA</span>';
+        tbody.innerHTML+=`<tr class="hover:bg-blue-50 cursor-pointer" onclick="toggleFila(${t.id_talon})" id="fila-${t.id_talon}">
+            <td class="px-3 py-3"><input type="checkbox" class="sel-talon w-4 h-4 accent-blue-600" value="${t.id_talon}" data-monto="${t.monto}" data-codigo="${t.codigo_barra}" onclick="event.stopPropagation();actualizarBarra()"></td>
+            <td class="px-4 py-3 font-bold text-blue-800">${t.numero_familia}</td>
+            <td class="px-4 py-3">${t.nombre_tutor_principal||'-'}</td>
+            <td class="px-4 py-3 text-gray-600">${t.nombre_concepto||'-'}</td>
+            <td class="px-4 py-3 text-gray-500">${periodo}</td>
+            <td class="px-4 py-3 text-right font-mono font-semibold text-green-700">${monto}</td>
+            <td class="px-4 py-3">${badge}</td>
+        </tr>`;
+    });
+}
+
+function toggleFila(id){
+    const cb=document.querySelector(`.sel-talon[value="${id}"]`);
+    if(cb&&!cb.disabled){cb.checked=!cb.checked;actualizarBarra();}
+}
+function toggleSelTodos(checked){
+    document.querySelectorAll('.sel-talon').forEach(cb=>{cb.checked=checked;});
+    actualizarBarra();
+}
+function actualizarBarra(){
+    const checks=[...document.querySelectorAll('.sel-talon:checked')];
+    const total=checks.reduce((s,cb)=>s+parseFloat(cb.dataset.monto||0),0);
+    document.getElementById('resSelCount').textContent=checks.length;
+    document.getElementById('resTotalMonto').textContent=total.toLocaleString('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0});
+    document.querySelectorAll('.sel-talon').forEach(cb=>{
+        const fila=document.getElementById('fila-'+cb.value);
+        if(fila)fila.classList.toggle('bg-blue-50',cb.checked);
+    });
+}
+
+async function registrarPagosListado(){
+    const checks=[...document.querySelectorAll('.sel-talon:checked')];
+    if(!checks.length){alert('Seleccioná al menos un talón.');return;}
+    const medio=document.getElementById('listMedioPago').value;
+    const obs=document.getElementById('listObs').value.trim();
+    const msgEl=document.getElementById('listMsg');
+    const btn=document.getElementById('btnRegistrarListado');
+    btn.disabled=true;btn.textContent='Registrando...';
+    msgEl.classList.add('hidden');
+    let ok=0,err=0;
+    for(const cb of checks){
+        const res=await fetch('/api/pagos',{method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({codigo_barra:cb.dataset.codigo,medio_pago:medio,observaciones:obs})});
+        if(res.ok)ok++;else err++;
+    }
+    btn.disabled=false;btn.textContent='Registrar pagos';
+    msgEl.textContent=`✓ ${ok} pago(s) registrado(s)${err?' — '+err+' error(s)':''}`;
+    msgEl.className='w-full text-sm '+(err?'text-red-600':'text-green-700 font-semibold');
+    msgEl.classList.remove('hidden');
+    document.getElementById('selTodosListado').checked=false;
+    cargarListadoTalones();
+    setTimeout(()=>msgEl.classList.add('hidden'),4000);
+}
+
+// ======= MOROSOS =======
+async function cargarMorosos(){
+    const data=await fetch('/api/morosos').then(r=>r.json()).catch(()=>[]);
+    const tbody=document.getElementById('tablaMorosos');
+    const sinEl=document.getElementById('sinMorosos');
+    const resEl=document.getElementById('resumenMorosos');
+    tbody.innerHTML='';
+
+    const lista=Array.isArray(data)?data:[];
+    if(!lista.length){
+        sinEl.classList.remove('hidden');
+        resEl.innerHTML='';
+        return;
+    }
+    sinEl.classList.add('hidden');
+
+    // Resumen total
+    const totalFamilias=lista.length;
+    const totalTalones=lista.reduce((s,m)=>s+(m.talones_adeudados||0),0);
+    const totalDeuda=lista.reduce((s,m)=>s+Number(m.deuda_total||0),0);
+    const fmt=v=>Number(v).toLocaleString('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0});
+    resEl.innerHTML=`
+        <div class="bg-white rounded-xl shadow p-4 border-l-4 border-red-500">
+            <p class="text-xs text-gray-500">Familias morosas</p>
+            <p class="text-3xl font-bold text-red-700 mt-1">${totalFamilias}</p>
+        </div>
+        <div class="bg-white rounded-xl shadow p-4 border-l-4 border-orange-500">
+            <p class="text-xs text-gray-500">Cuotas impagas</p>
+            <p class="text-3xl font-bold text-orange-600 mt-1">${totalTalones}</p>
+        </div>
+        <div class="bg-white rounded-xl shadow p-4 border-l-4 border-yellow-500">
+            <p class="text-xs text-gray-500">Deuda total</p>
+            <p class="text-2xl font-bold text-yellow-700 mt-1">${fmt(totalDeuda)}</p>
+        </div>`;
+
+    lista.forEach(m=>{
+        const deuda=fmt(m.deuda_total||0);
+        // Formatear periodo_mas_antiguo (formato YYYYMM)
+        let desde='-';
+        if(m.periodo_mas_antiguo&&m.periodo_mas_antiguo.length>=6){
+            const anio=m.periodo_mas_antiguo.substring(0,4);
+            const mes=parseInt(m.periodo_mas_antiguo.substring(4,6));
+            desde=mesesCortos[mes]+' '+anio;
+        }
+        // Badge de deuda (color por cant. cuotas)
+        const cuotas=m.talones_adeudados||0;
+        const badgeCls=cuotas>=3?'bg-red-100 text-red-700':cuotas>=2?'bg-orange-100 text-orange-700':'bg-yellow-100 text-yellow-700';
+        tbody.innerHTML+=`<tr class="hover:bg-red-50">
+            <td class="px-4 py-3 font-bold text-blue-800">${m.numero_familia}</td>
+            <td class="px-4 py-3">${m.nombre||'-'}</td>
+            <td class="px-4 py-3 text-gray-600">${m.telefono||'-'}</td>
+            <td class="px-4 py-3 text-center"><span class="px-3 py-1 rounded-full text-xs font-semibold ${badgeCls}">${cuotas} cuota${cuotas!==1?'s':''}</span></td>
+            <td class="px-4 py-3 text-right font-mono font-bold text-red-700">${deuda}</td>
+            <td class="px-4 py-3 text-gray-500 text-xs">${desde}</td>
+            <td class="px-4 py-3">
+                <button onclick="verTalonesMoroso(${m.id_familia},${m.numero_familia})" class="text-blue-600 hover:underline text-xs">Ver talones</button>
+            </td>
+        </tr>`;
+    });
+}
+
+async function verTalonesMoroso(idFamilia, numFamilia){
+    // Cargar tab listado y buscar por familia
+    mostrarTab('listado');
+    document.getElementById('listMes').value='';
+    document.getElementById('listAnio').value='';
+    document.getElementById('listConcepto').value='';
+    document.getElementById('inclExtras').checked=true;
+    await cargarListadoTalones();
+    // Filtrar por familia
+    const buscarEl=document.getElementById('listBuscar');
+    buscarEl.value=String(numFamilia);
+    filtrarTablaListado();
+}
+
+// ======= HISTORIAL =======
 async function cargarPagos(){
-    const mes=document.getElementById('filtroMes').value;
-    const anio=document.getElementById('filtroAnio').value;
+    const mes=document.getElementById('histMes').value;
+    const anio=document.getElementById('histAnio').value;
     const p=new URLSearchParams();
     if(mes)p.set('mes',mes);if(anio)p.set('anio',anio);
     const data=await fetch('/api/pagos?'+p).then(r=>r.json());
@@ -138,26 +472,27 @@ async function cargarPagos(){
     data.forEach(p=>{
         const monto=Number(p.monto).toLocaleString('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0});
         const mc=medioCls[p.medio_pago]||'bg-gray-100 text-gray-600';
+        const fecha=p.fecha_pago?p.fecha_pago.substring(0,10):'-';
         tbody.innerHTML+=`<tr class="hover:bg-gray-50">
             <td class="px-4 py-2 font-bold">${p.numero_familia}</td>
             <td class="px-4 py-2">${p.nombre_tutor_principal||'-'}</td>
             <td class="px-4 py-2">${p.nombre_concepto||'-'}</td>
-            <td class="px-4 py-2 text-gray-500">${p.fecha_pago}</td>
+            <td class="px-4 py-2 text-gray-500">${fecha}</td>
             <td class="px-4 py-2"><span class="px-2 py-0.5 rounded-full text-xs ${mc}">${p.medio_pago}</span></td>
             <td class="px-4 py-2 text-right font-mono font-semibold">${monto}</td>
             <td class="px-4 py-2 text-gray-400 text-xs">${p.observaciones||''}</td>
         </tr>`;
     });
 }
+
 async function cargarResumenMedio(){
-    const mes=document.getElementById('filtroMes').value;
-    const anio=document.getElementById('filtroAnio').value;
+    const mes=document.getElementById('histMes').value;
+    const anio=document.getElementById('histAnio').value;
     const p=new URLSearchParams();
     if(mes)p.set('mes',mes);if(anio)p.set('anio',anio);
     const data=await fetch('/api/pagos/resumen/medio-pago?'+p).then(r=>r.json());
     const sec=document.getElementById('resumenMedios');
-    sec.innerHTML='';
-    sec.classList.remove('hidden');
+    sec.innerHTML='';sec.classList.remove('hidden');
     const colores={'EFECTIVO':'border-green-500 text-green-700','TRANSFERENCIA':'border-blue-500 text-blue-700','MERCADOPAGO':'border-indigo-500 text-indigo-700','OTRO':'border-gray-400 text-gray-600'};
     (data||[]).forEach(r=>{
         const cls=colores[r.medio_pago]||'border-gray-400 text-gray-600';

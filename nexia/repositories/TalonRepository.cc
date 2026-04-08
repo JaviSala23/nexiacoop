@@ -29,7 +29,7 @@ static Talon rowToTalon(const Row& row) {
     return t;
 }
 
-void TalonRepository::listar(int mes, int anio, int idConcepto,
+void TalonRepository::listar(int mes, int anio, int idConcepto, bool soloExtras,
     std::function<void(std::vector<Talon>)> callback,
     std::function<void(const std::string&)> errCallback)
 {
@@ -45,8 +45,12 @@ void TalonRepository::listar(int mes, int anio, int idConcepto,
         "JOIN conceptos c ON t.id_concepto=c.id_concepto "
         "LEFT JOIN tutores tp ON tp.id_familia=f.id_familia AND tp.es_principal=1 "
         "WHERE 1=1 ";
-    if (mes > 0)       sql += "AND t.mes="  + std::to_string(mes)  + " ";
-    if (anio > 0)      sql += "AND t.anio=" + std::to_string(anio) + " ";
+    if (soloExtras) {
+        sql += "AND t.mes=0 AND t.anio=0 ";
+    } else {
+        if (mes > 0)       sql += "AND t.mes="  + std::to_string(mes)  + " ";
+        if (anio > 0)      sql += "AND t.anio=" + std::to_string(anio) + " ";
+    }
     if (idConcepto > 0) sql += "AND t.id_concepto=" + std::to_string(idConcepto) + " ";
     sql += "ORDER BY f.numero_familia";
 
@@ -207,25 +211,29 @@ void TalonRepository::listarMorosos(
         "SELECT f.id_familia, f.numero_familia, "
         "tp.nombre_completo AS nombre_familia, "
         "f.direccion, f.telefono, "
-        "COUNT(t.id_talon) AS meses_adeudados, "
-        "SUM(t.monto) AS deuda_total "
+        "COUNT(t.id_talon) AS talones_adeudados, "
+        "SUM(t.monto) AS deuda_total, "
+        "MIN(CONCAT(LPAD(t.anio,4,'0'), LPAD(t.mes,2,'0'))) AS periodo_mas_antiguo "
         "FROM talones t "
         "JOIN familias f ON t.id_familia=f.id_familia "
         "LEFT JOIN tutores tp ON tp.id_familia=f.id_familia AND tp.es_principal=1 "
         "WHERE t.estado='GENERADO' "
+        "AND t.mes > 0 "
+        "AND (t.anio < YEAR(CURDATE()) OR (t.anio = YEAR(CURDATE()) AND t.mes < MONTH(CURDATE()))) "
         "GROUP BY f.id_familia "
-        "ORDER BY tp.nombre_completo",
+        "ORDER BY deuda_total DESC",
         [callback](const Result& r) {
             Json::Value arr(Json::arrayValue);
             for (const auto& row : r) {
                 Json::Value obj;
-                obj["id_familia"]     = row["id_familia"].as<int>();
-                obj["numero_familia"] = row["numero_familia"].as<int>();
-                obj["nombre"]         = row["nombre_familia"].isNull() ? "" : row["nombre_familia"].as<std::string>();
-                obj["direccion"]      = row["direccion"].isNull() ? "" : row["direccion"].as<std::string>();
-                obj["telefono"]       = row["telefono"].isNull() ? "" : row["telefono"].as<std::string>();
-                obj["meses_adeudados"]= row["meses_adeudados"].as<int>();
-                obj["deuda_total"]    = row["deuda_total"].as<double>();
+                obj["id_familia"]       = row["id_familia"].as<int>();
+                obj["numero_familia"]   = row["numero_familia"].as<int>();
+                obj["nombre"]           = row["nombre_familia"].isNull() ? "" : row["nombre_familia"].as<std::string>();
+                obj["direccion"]        = row["direccion"].isNull() ? "" : row["direccion"].as<std::string>();
+                obj["telefono"]         = row["telefono"].isNull() ? "" : row["telefono"].as<std::string>();
+                obj["talones_adeudados"]= row["talones_adeudados"].as<int>();
+                obj["deuda_total"]      = row["deuda_total"].as<double>();
+                obj["periodo_mas_antiguo"] = row["periodo_mas_antiguo"].isNull() ? "" : row["periodo_mas_antiguo"].as<std::string>();
                 arr.append(obj);
             }
             callback(arr);

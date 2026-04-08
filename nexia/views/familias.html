@@ -212,11 +212,13 @@ function editarDesdeDetalle() {
     if (familiaDetalleActual) abrirModalEditar(familiaDetalleActual);
 }
 
-let tutorCount = 0, alumnoCount = 0;
+let tutorCount = 0, _tutorIdx = 0;
+let _alumnoIdx = 0;
 
 function agregarTutor(datos) {
     if (tutorCount >= 2) return;
-    const idx = tutorCount++;
+    tutorCount++;
+    const idx = _tutorIdx++;
     const d = datos || {};
     const div = document.createElement('div');
     div.id = 'tutor_' + idx;
@@ -241,27 +243,30 @@ function quitarTutor(idx) {
 }
 
 function agregarAlumno(datos) {
-    const idx = alumnoCount++;
+    const idx = _alumnoIdx++;
     const d = datos || {};
     const div = document.createElement('div');
     div.id = 'alumno_' + idx;
     div.className = 'border rounded-lg p-3 bg-gray-50 grid grid-cols-2 gap-3';
+    const estadoOpts = ['ACTIVO','EGRESADO'].map(e=>`<option value="${e}" ${(d.estado||'ACTIVO')===e?'selected':''}>${e}</option>`).join('');
     div.innerHTML = `
         <input type="hidden" class="alumno-id" value="${d.id_alumno||''}">
         <div><label class="text-xs text-gray-500">DNI *</label><input type="text" class="alumno-dni mt-1 w-full border rounded px-2 py-1 text-sm" value="${d.dni||''}"></div>
         <div><label class="text-xs text-gray-500">Nombre completo *</label><input type="text" class="alumno-nombre mt-1 w-full border rounded px-2 py-1 text-sm" value="${d.nombre_completo||''}"></div>
         <div><label class="text-xs text-gray-500">Fecha de nacimiento</label><input type="date" class="alumno-fnac mt-1 w-full border rounded px-2 py-1 text-sm" value="${d.fecha_nacimiento||''}"></div>
         <div><label class="text-xs text-gray-500">Año escolar</label><select class="alumno-anio mt-1 w-full border rounded px-2 py-1 text-sm">${window._cursosOpts||''}</select></div>
-        <div class="col-span-2 flex justify-end">
+        <div><label class="text-xs text-gray-500">Estado</label><select class="alumno-estado mt-1 w-full border rounded px-2 py-1 text-sm">${estadoOpts}</select></div>
+        <div class="flex items-end justify-end">
             <button type="button" onclick="quitarAlumno(${idx})" class="text-red-400 hover:text-red-600 text-xs">Quitar</button>
         </div>`;
     document.getElementById('alumnosList').appendChild(div);
     if (d.anio_escolar) setAnioEscolar(idx, d.anio_escolar);
+    div.scrollIntoView({behavior:'smooth', block:'nearest'});
 }
 
 function quitarAlumno(idx) {
     const el = document.getElementById('alumno_' + idx);
-    if (el) { el.remove(); alumnoCount--; }
+    if (el) el.remove();
 }
 
 function limpiarModal() {
@@ -274,7 +279,7 @@ function limpiarModal() {
     document.getElementById('tutoresList').innerHTML = '';
     document.getElementById('alumnosList').innerHTML = '';
     document.getElementById('modalError').classList.add('hidden');
-    tutorCount = 0; alumnoCount = 0;
+    tutorCount = 0; _tutorIdx = 0; _alumnoIdx = 0;
     agregarTutor();
 }
 
@@ -299,10 +304,10 @@ async function abrirModalEditar(id) {
     document.getElementById('famTelefono').value = fam.telefono || '';
     document.getElementById('famObservaciones').value = fam.observaciones || '';
     document.getElementById('tutoresList').innerHTML = '';
-    tutorCount = 0;
+    tutorCount = 0; _tutorIdx = 0;
     (tutores||[]).forEach(t => agregarTutor(t));
     document.getElementById('alumnosList').innerHTML = '';
-    alumnoCount = 0;
+    _alumnoIdx = 0;
     (alumnos||[]).forEach(a => agregarAlumno(a));
     document.getElementById('modalFamilia').classList.remove('hidden');
 }
@@ -330,7 +335,8 @@ function recogerAlumnos() {
         dni:            d.querySelector('.alumno-dni').value,
         nombre_completo: d.querySelector('.alumno-nombre').value,
         fecha_nacimiento: d.querySelector('.alumno-fnac').value,
-        anio_escolar:   d.querySelector('.alumno-anio').value
+        anio_escolar:   d.querySelector('.alumno-anio').value,
+        estado:         d.querySelector('.alumno-estado')?.value || 'ACTIVO'
     }));
 }
 

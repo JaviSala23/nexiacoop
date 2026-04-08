@@ -222,17 +222,49 @@ void FamiliaController::actualizar(const drogon::HttpRequestPtr& req,
     f.estado        = (*body).get("estado", "ACTIVA").asString();
     f.observaciones = (*body).get("observaciones", "").asString();
 
+    auto errCb = [callback](const std::string& e) {
+        LOG_ERROR << e;
+        Json::Value err; err["error"] = e;
+        auto r = drogon::HttpResponse::newHttpJsonResponse(err);
+        r->setStatusCode(drogon::k500InternalServerError); callback(r);
+    };
+
     FamiliaRepository::actualizar(f,
-        [callback]() {
-            Json::Value res; res["ok"] = true;
-            callback(drogon::HttpResponse::newHttpJsonResponse(res));
+        [body, id, callback, errCb]() {
+            // Procesar alumnos del payload
+            if (!body->isMember("alumnos") || !(*body)["alumnos"].isArray() || (*body)["alumnos"].empty()) {
+                Json::Value res; res["ok"] = true;
+                callback(drogon::HttpResponse::newHttpJsonResponse(res));
+                return;
+            }
+            const auto& alumnosJson = (*body)["alumnos"];
+            auto pending = std::make_shared<int>(static_cast<int>(alumnosJson.size()));
+            auto doneCb  = [pending, callback]() {
+                if (--(*pending) == 0) {
+                    Json::Value res; res["ok"] = true;
+                    callback(drogon::HttpResponse::newHttpJsonResponse(res));
+                }
+            };
+            for (Json::ArrayIndex j = 0; j < alumnosJson.size(); ++j) {
+                Alumno a;
+                std::string idStr = alumnosJson[j].get("id_alumno", "").asString();
+                a.id_alumno        = idStr.empty() ? 0 : std::stoi(idStr);
+                a.id_familia       = id;
+                a.dni              = alumnosJson[j].get("dni", "").asString();
+                a.nombre_completo  = alumnosJson[j].get("nombre_completo", "").asString();
+                a.fecha_nacimiento = alumnosJson[j].get("fecha_nacimiento", "").asString();
+                a.anio_escolar     = alumnosJson[j].get("anio_escolar", "").asString();
+                a.estado           = alumnosJson[j].get("estado", "ACTIVO").asString();
+                if (a.nombre_completo.empty()) {
+                    doneCb(); // fila vacía, omitir
+                } else if (a.id_alumno > 0) {
+                    FamiliaRepository::actualizarAlumno(a, doneCb, errCb);
+                } else {
+                    FamiliaRepository::insertarAlumno(a, [doneCb](int) { doneCb(); }, errCb);
+                }
+            }
         },
-        [callback](const std::string& e) {
-            LOG_ERROR << e;
-            Json::Value err; err["error"] = e;
-            auto r = drogon::HttpResponse::newHttpJsonResponse(err);
-            r->setStatusCode(drogon::k500InternalServerError); callback(r);
-        });
+        errCb);
 }
 
 void FamiliaController::cambiarEstado(const drogon::HttpRequestPtr& req,
