@@ -5,6 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Nexia - Talones</title>
 <script src="https://cdn.tailwindcss.com"></script>
+<style>
+@media print {
+    body > * { display: none !important; }
+    #zonaImpresion { display: block !important; }
+}
+#zonaImpresion { display: none; }
+.talon-ticket {
+    border: 2px solid #1e3a5f;
+    border-radius: 8px;
+    padding: 12px 16px;
+    page-break-inside: avoid;
+    font-family: Arial, sans-serif;
+}
+</style>
 </head>
 <body class="bg-gray-100 min-h-screen flex">
 <!-- Sidebar -->
@@ -27,12 +41,19 @@
         <button onclick="logout()" class="mt-2 w-full text-left text-sm text-red-300 hover:text-red-200">Cerrar sesi&oacute;n</button>
     </div>
 </aside>
+
 <main class="ml-64 flex-1 p-8">
     <h2 class="text-2xl font-bold text-blue-900 mb-6">Talones</h2>
+
+    <!-- Acciones principales -->
     <div class="flex flex-wrap gap-3 mb-6">
         <button onclick="abrirModalGenerar()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-medium">Generar cuotas mensuales</button>
         <button onclick="abrirModalExtra()" class="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2 rounded-lg font-medium">+ Tal&oacute;n extra</button>
+        <button onclick="imprimirTodos()" class="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg font-medium">&#128438; Imprimir todos</button>
+        <button onclick="imprimirSeleccionados()" class="bg-teal-600 hover:bg-teal-700 text-white px-5 py-2 rounded-lg font-medium">&#128438; Imprimir seleccionados</button>
     </div>
+
+    <!-- Filtros -->
     <div class="bg-white rounded-xl shadow p-4 mb-6 flex flex-wrap gap-4 items-end">
         <div>
             <label class="text-xs text-gray-500">Mes</label>
@@ -46,7 +67,7 @@
         </div>
         <div>
             <label class="text-xs text-gray-500">A&ntilde;o</label>
-            <input id="filtroAnio" type="number" class="mt-1 border rounded px-3 py-2 text-sm w-24" placeholder="2025">
+            <input id="filtroAnio" type="number" class="mt-1 border rounded px-3 py-2 text-sm w-24">
         </div>
         <div>
             <label class="text-xs text-gray-500">Concepto</label>
@@ -54,18 +75,34 @@
                 <option value="">Todos</option>
             </select>
         </div>
+        <div>
+            <label class="text-xs text-gray-500">Estado</label>
+            <select id="filtroEstado" class="mt-1 border rounded px-3 py-2 text-sm">
+                <option value="">Todos</option>
+                <option value="GENERADO">Generados</option>
+                <option value="PAGADO">Pagados</option>
+                <option value="ANULADO">Anulados</option>
+            </select>
+        </div>
         <button onclick="cargarTalones()" class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded text-sm">Filtrar</button>
+        <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+            <input type="checkbox" id="selTodos" onchange="toggleSeleccionarTodos(this.checked)">
+            Sel. todos
+        </label>
     </div>
+
+    <!-- Tabla -->
     <div class="bg-white rounded-xl shadow overflow-hidden">
         <table class="w-full text-sm">
             <thead class="bg-blue-50 text-blue-800">
                 <tr>
-                    <th class="px-4 py-3 text-left">Familia</th>
+                    <th class="px-3 py-3 w-8"></th>
+                    <th class="px-4 py-3 text-left">Fam.</th>
                     <th class="px-4 py-3 text-left">Tutor</th>
                     <th class="px-4 py-3 text-left">Concepto</th>
                     <th class="px-4 py-3 text-left">Per&iacute;odo</th>
                     <th class="px-4 py-3 text-right">Monto</th>
-                    <th class="px-4 py-3 text-left">C&oacute;digo barra</th>
+                    <th class="px-4 py-3 text-left">C&oacute;d. barra</th>
                     <th class="px-4 py-3 text-left">Estado</th>
                     <th class="px-4 py-3 text-left">Acciones</th>
                 </tr>
@@ -75,6 +112,11 @@
         <p id="sinResultados" class="text-center text-gray-400 py-8 hidden">Sin resultados para el filtro seleccionado</p>
     </div>
 </main>
+
+<!-- Zona de impresión (oculta en pantalla, visible solo al imprimir) -->
+<div id="zonaImpresion"></div>
+
+<!-- Modal Generar -->
 <div id="modalGenerar" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 hidden">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8">
         <h3 class="text-xl font-bold text-blue-900 mb-6">Generar Cuotas Mensuales</h3>
@@ -90,7 +132,7 @@
             </div>
             <div>
                 <label class="text-xs text-gray-500">A&ntilde;o *</label>
-                <input id="genAnio" type="number" class="mt-1 w-full border rounded px-3 py-2 text-sm" value="2025">
+                <input id="genAnio" type="number" class="mt-1 w-full border rounded px-3 py-2 text-sm">
             </div>
         </div>
         <div id="genError" class="text-red-600 text-sm mt-3 hidden"></div>
@@ -101,6 +143,8 @@
         </div>
     </div>
 </div>
+
+<!-- Modal Extra -->
 <div id="modalExtra" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 hidden">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8">
         <h3 class="text-xl font-bold text-purple-800 mb-6">Nuevo Tal&oacute;n Extra</h3>
@@ -129,8 +173,15 @@
         </div>
     </div>
 </div>
+
 <script>
+let talonesData = [];
+let nombreInstitucion = '';
+const meses = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const mesesCortos = ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
 async function logout(){await fetch('/api/auth/logout',{method:'POST'});window.location.href='/login';}
+
 fetch('/api/auth/me').then(r=>r.json()).then(u=>{
     if(!u.id){window.location.href='/login';return;}
     document.getElementById('userInfo').textContent=u.nombre+' ('+u.rol+')';
@@ -139,8 +190,11 @@ fetch('/api/auth/me').then(r=>r.json()).then(u=>{
     document.getElementById('filtroAnio').value=ahora.getFullYear();
     document.getElementById('genMes').value=ahora.getMonth()+1;
     document.getElementById('genAnio').value=ahora.getFullYear();
-    cargarConceptos();cargarTalones();
+    fetch('/api/admin/parametros').then(r=>r.json()).then(p=>{ nombreInstitucion=p.nombre_institucion||'Cooperadora Escolar'; });
+    cargarConceptos();
+    cargarTalones();
 });
+
 let conceptosCache=[];
 async function cargarConceptos(){
     conceptosCache=await fetch('/api/conceptos').then(r=>r.json());
@@ -153,24 +207,35 @@ async function cargarConceptos(){
         selE.innerHTML+=`<option value="${c.id_concepto}">${c.nombre}</option>`;
     });
 }
+
 async function cargarTalones(){
     const mes=document.getElementById('filtroMes').value;
     const anio=document.getElementById('filtroAnio').value;
     const conc=document.getElementById('filtroConcepto').value;
+    const est=document.getElementById('filtroEstado').value;
     const p=new URLSearchParams();
-    if(mes)p.set('mes',mes);if(anio)p.set('anio',anio);if(conc)p.set('id_concepto',conc);
+    if(mes)p.set('mes',mes);
+    if(anio)p.set('anio',anio);
+    if(conc)p.set('id_concepto',conc);
     const data=await fetch('/api/talones?'+p).then(r=>r.json());
+    talonesData=(Array.isArray(data)?data:[]).filter(t=>!est||t.estado===est);
+    renderTabla();
+}
+
+function renderTabla(){
     const tbody=document.getElementById('tablaTalones');
     const sinRes=document.getElementById('sinResultados');
     tbody.innerHTML='';
-    if(!Array.isArray(data)||!data.length){sinRes.classList.remove('hidden');return;}
+    document.getElementById('selTodos').checked=false;
+    if(!talonesData.length){sinRes.classList.remove('hidden');return;}
     sinRes.classList.add('hidden');
-    const meses=['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-    data.forEach(t=>{
-        const ec=t.estado==='PAGADO'?'bg-green-100 text-green-700':t.estado==='ANULADO'?'bg-gray-100 text-gray-400':' bg-yellow-100 text-yellow-700';
-        const periodo=t.mes?(meses[t.mes]+' '+t.anio):(t.anio||'');
+    talonesData.forEach(t=>{
+        const ec=t.estado==='PAGADO'?'bg-green-100 text-green-700':t.estado==='ANULADO'?'bg-gray-100 text-gray-400':'bg-yellow-100 text-yellow-700';
+        const periodo=t.mes?(mesesCortos[t.mes]+' '+t.anio):(t.anio||'');
         const monto=Number(t.monto).toLocaleString('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0});
-        tbody.innerHTML+=`<tr class="hover:bg-gray-50">
+        const btnAnular=t.estado==='GENERADO'?`<button onclick="anularTalon(${t.id_talon})" class="text-red-400 hover:text-red-600 text-xs">Anular</button>`:'';
+        tbody.innerHTML+=`<tr class="hover:bg-gray-50" id="row-${t.id_talon}">
+            <td class="px-3 py-2"><input type="checkbox" class="sel-talon" value="${t.id_talon}" ${t.estado==='ANULADO'?'disabled':''}></td>
             <td class="px-4 py-2 font-bold">${t.numero_familia}</td>
             <td class="px-4 py-2">${t.nombre_tutor_principal||'-'}</td>
             <td class="px-4 py-2">${t.nombre_concepto||'-'}</td>
@@ -178,10 +243,19 @@ async function cargarTalones(){
             <td class="px-4 py-2 text-right font-mono">${monto}</td>
             <td class="px-4 py-2 font-mono text-xs">${t.codigo_barra}</td>
             <td class="px-4 py-2"><span class="px-2 py-0.5 rounded-full text-xs ${ec}">${t.estado}</span></td>
-            <td class="px-4 py-2">${t.estado==='PENDIENTE'?`<button onclick="anularTalon(${t.id_talon})" class="text-red-400 hover:text-red-600 text-xs">Anular</button>`:''}</td>
+            <td class="px-4 py-2 flex gap-2">
+                <button onclick="imprimirUno(${t.id_talon})" class="text-blue-600 hover:underline text-xs">Imprimir</button>
+                ${btnAnular}
+            </td>
         </tr>`;
     });
 }
+
+function toggleSeleccionarTodos(checked){
+    document.querySelectorAll('.sel-talon:not(:disabled)').forEach(cb=>cb.checked=checked);
+}
+
+// ---------- Generar ----------
 function abrirModalGenerar(){
     document.getElementById('genError').classList.add('hidden');
     document.getElementById('genMsg').classList.add('hidden');
@@ -200,6 +274,8 @@ async function generarTalones(){
     document.getElementById('genMsg').classList.remove('hidden');
     setTimeout(()=>{document.getElementById('modalGenerar').classList.add('hidden');cargarTalones();},1500);
 }
+
+// ---------- Extra ----------
 async function abrirModalExtra(){
     const familias=await fetch('/api/familias?estado=ACTIVA').then(r=>r.json());
     const sel=document.getElementById('extraFamilia');
@@ -221,14 +297,86 @@ async function generarExtra(){
     const res=await fetch('/api/talones/generar-extra',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
     const data=await res.json();
     if(!res.ok){document.getElementById('extraError').textContent=data.error||'Error';document.getElementById('extraError').classList.remove('hidden');return;}
-    document.getElementById('modalExtra').classList.add('hidden');cargarTalones();
+    document.getElementById('modalExtra').classList.add('hidden');
+    cargarTalones();
 }
+
+// ---------- Anular ----------
 async function anularTalon(id){
-    if(!confirm('Anular este talon?'))return;
+    if(!confirm('¿Anular este talón?'))return;
     const res=await fetch('/api/talones/'+id+'/anular',{method:'POST'});
     const data=await res.json();
-    if(!data.ok)alert(data.error||'Error');else cargarTalones();
+    if(!data.ok)alert(data.error||'Error');
+    else cargarTalones();
+}
+
+// ---------- Impresión ----------
+function buildTicketsHTML(lista){
+    const monedaFmt = v => Number(v).toLocaleString('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0});
+    const rows = lista.map(t => {
+        const periodo = t.mes ? (meses[t.mes] + ' ' + t.anio) : (t.anio ? 'Año '+t.anio : '');
+        return `<div class="talon-ticket" style="margin-bottom:12px;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                <div>
+                    <div style="font-size:13px;font-weight:bold;color:#1e3a5f;">${nombreInstitucion}</div>
+                    <div style="font-size:11px;color:#555;margin-top:2px;">Cooperadora Escolar</div>
+                </div>
+                <div style="font-size:20px;font-weight:bold;color:#1e3a5f;">Nº ${t.numero_familia}</div>
+            </div>
+            <hr style="margin:8px 0;border-color:#cce;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:12px;">
+                <div><b>Tutor:</b> ${t.nombre_tutor_principal||'-'}</div>
+                <div><b>Período:</b> ${periodo||'-'}</div>
+                <div><b>Concepto:</b> ${t.nombre_concepto||'-'}</div>
+                <div><b>Monto:</b> <span style="font-size:14px;font-weight:bold;">${monedaFmt(t.monto)}</span></div>
+            </div>
+            <div style="margin-top:8px;padding:6px;background:#f0f4ff;border-radius:4px;font-family:monospace;font-size:11px;letter-spacing:2px;text-align:center;">
+                ${t.codigo_barra}
+            </div>
+            ${t.observaciones?`<div style="font-size:10px;color:#888;margin-top:4px;">Obs: ${t.observaciones}</div>`:''}
+        </div>`;
+    }).join('');
+
+    return `<!DOCTYPE html><html><head><meta charset="UTF-8">
+        <title>Talones - ${nombreInstitucion}</title>
+        <style>
+            body{font-family:Arial,sans-serif;margin:0;padding:16px;}
+            .talon-ticket{border:2px solid #1e3a5f;border-radius:8px;padding:12px 16px;page-break-inside:avoid;margin-bottom:16px;max-width:420px;}
+            @media print{body{margin:0;padding:8px;} .no-print{display:none;}}
+            .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+        </style>
+    </head><body>
+        <div class="no-print" style="margin-bottom:16px;display:flex;gap:12px;">
+            <button onclick="window.print()" style="background:#1e40af;color:white;border:none;padding:10px 24px;border-radius:6px;cursor:pointer;font-size:14px;">Imprimir</button>
+            <button onclick="window.close()" style="background:#6b7280;color:white;border:none;padding:10px 24px;border-radius:6px;cursor:pointer;font-size:14px;">Cerrar</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(400px,1fr));gap:16px;">
+            ${rows}
+        </div>
+    </body></html>`;
+}
+
+function abrirVentanaImpresion(lista){
+    if(!lista.length){alert('No hay talones para imprimir.');return;}
+    const win=window.open('','_blank','width=900,height=700');
+    win.document.write(buildTicketsHTML(lista));
+    win.document.close();
+}
+
+function imprimirTodos(){
+    const pending = talonesData.filter(t=>t.estado!=='ANULADO');
+    abrirVentanaImpresion(pending);
+}
+
+function imprimirSeleccionados(){
+    const ids=new Set([...document.querySelectorAll('.sel-talon:checked')].map(cb=>parseInt(cb.value)));
+    if(!ids.size){alert('Seleccioná al menos un talón.');return;}
+    abrirVentanaImpresion(talonesData.filter(t=>ids.has(t.id_talon)));
+}
+
+function imprimirUno(id){
+    const t=talonesData.find(x=>x.id_talon===id);
+    if(t)abrirVentanaImpresion([t]);
 }
 </script>
-</body>
-</html>
+</body></html>

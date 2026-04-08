@@ -20,7 +20,7 @@
             "port": 3306,
             "dbname": "CooperadoraEscolar",
             "user": "root",
-            "passwd": "Celeste14.",
+            "passwd": "Celeste14",
             "connection_number": 5,
             "name": "main",
             "auto_batch": false
