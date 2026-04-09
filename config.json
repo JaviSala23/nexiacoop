@@ -23,7 +23,8 @@
             "passwd": "Celeste14",
             "connection_number": 5,
             "name": "main",
-            "auto_batch": false
+            "auto_batch": false,
+            "characterSet": "utf8mb4"
         }
     ]
 }
