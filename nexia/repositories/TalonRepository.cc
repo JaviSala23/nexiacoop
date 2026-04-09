@@ -107,24 +107,35 @@ void TalonRepository::insertarBatch(const std::vector<Talon>& talones,
     if (talones.empty()) { callback(); return; }
     auto db = app().getDbClient("main");
 
-    // Todos los valores son enteros y doubles generados internamente - seguro armar SQL
+    // Use prepared statement for safety
     std::string sql =
-        "INSERT INTO talones (id_familia, id_concepto, mes, anio, monto, codigo_barra) VALUES ";
-    bool first = true;
-    for (const auto& t : talones) {
-        if (!first) sql += ",";
-        first = false;
-        std::ostringstream monto;
-        monto << std::fixed << std::setprecision(2) << t.monto;
-        sql += "(" + std::to_string(t.id_familia) + ","
-                   + std::to_string(t.id_concepto) + ","
-                   + std::to_string(t.mes) + ","
-                   + std::to_string(t.anio) + ","
-                   + monto.str() + ","
-                   + "'" + t.codigo_barra + "')";
-    }
-    db->execSqlAsync(sql,
-        [callback](const Result&) { callback(); },
+        "INSERT INTO talones (id_familia, id_concepto, mes, anio, monto, codigo_barra, observaciones) "
+        "VALUES (?, ?, NULLIF(?,0), NULLIF(?,0), ?, ?, ?)";
+    
+    auto binder = *db << sql;
+    
+    // Insert each talon individually in a transaction for safety
+    db->execSqlAsync("START TRANSACTION",
+        [db, talones, sql, callback, errCallback](const Result&) {
+            std::function<void(size_t)> insertNext;
+            insertNext = [db, talones, sql, callback, errCallback, insertNext](size_t idx) {
+                if (idx >= talones.size()) {
+                    db->execSqlAsync("COMMIT",
+                        [callback](const Result&) { callback(); },
+                        [errCallback](const DrogonDbException& e) { errCallback(e.base().what()); });
+                    return;
+                }
+                const auto& t = talones[idx];
+                db->execSqlAsync(sql,
+                    [insertNext, idx](const Result&) { insertNext(idx + 1); },
+                    [db, errCallback](const DrogonDbException& e) {
+                        db->execSqlAsync("ROLLBACK", [](const Result&){}, [](const DrogonDbException&){});
+                        errCallback(e.base().what());
+                    },
+                    t.id_familia, t.id_concepto, t.mes, t.anio, t.monto, t.codigo_barra, t.observaciones);
+            };
+            insertNext(0);
+        },
         [errCallback](const DrogonDbException& e) { errCallback(e.base().what()); });
 }
 

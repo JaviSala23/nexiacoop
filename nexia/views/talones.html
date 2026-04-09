@@ -320,13 +320,37 @@ async function generarTalones(){
     const anio=parseInt(document.getElementById('genAnio').value);
     const btn=document.getElementById('btnGenerar');
     btn.disabled=true;btn.textContent='Generando...';
-    const res=await fetch('/api/talones/generar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mes,anio})});
-    const data=await res.json();
-    btn.disabled=false;btn.textContent='Generar';
-    if(!res.ok){document.getElementById('genError').textContent=data.error||'Error';document.getElementById('genError').classList.remove('hidden');return;}
-    document.getElementById('genMsg').textContent=data.mensaje||'Generados: '+data.generados;
-    document.getElementById('genMsg').classList.remove('hidden');
-    setTimeout(()=>{document.getElementById('modalGenerar').classList.add('hidden');cargarTalones();},1500);
+    
+    try {
+        const res=await fetch('/api/talones/generar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mes,anio})});
+        
+        // Check if session expired
+        if(res.status === 401){
+            window.location.href='/login';
+            return;
+        }
+        
+        let data;
+        try {
+            data = await res.json();
+        } catch(e) {
+            console.error('Error parsing JSON:', e);
+            document.getElementById('genError').textContent='Error del servidor. Por favor, intentá de nuevo.';
+            document.getElementById('genError').classList.remove('hidden');
+            return;
+        }
+        
+        btn.disabled=false;btn.textContent='Generar';
+        if(!res.ok){document.getElementById('genError').textContent=data.error||'Error';document.getElementById('genError').classList.remove('hidden');return;}
+        document.getElementById('genMsg').textContent=data.mensaje||'Generados: '+data.generados;
+        document.getElementById('genMsg').classList.remove('hidden');
+        setTimeout(()=>{document.getElementById('modalGenerar').classList.add('hidden');cargarTalones();},1500);
+    } catch(error) {
+        console.error('Error generating talones:', error);
+        btn.disabled=false;btn.textContent='Generar';
+        document.getElementById('genError').textContent='Error inesperado. Por favor, intentá de nuevo.';
+        document.getElementById('genError').classList.remove('hidden');
+    }
 }
 
 // ---------- Extra ----------
@@ -375,7 +399,22 @@ async function generarExtra(){
             if(!monto||isNaN(monto)){showExtraError('El monto es requerido');return;}
             btn.textContent='Generando...';
             const res=await fetch('/api/talones/generar-extra-todos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id_concepto:idConcepto,monto,observaciones:obs})});
-            const data=await res.json();
+            
+            // Check if session expired
+            if(res.status === 401){
+                window.location.href='/login';
+                return;
+            }
+            
+            let data;
+            try {
+                data = await res.json();
+            } catch(e) {
+                console.error('Error parsing JSON:', e);
+                showExtraError('Error del servidor. Por favor, intentá de nuevo.');
+                return;
+            }
+            
             if(!res.ok){showExtraError(data.error||'Error');return;}
             document.getElementById('modalExtra').classList.add('hidden');
             document.getElementById('soloExtras').checked=true;
@@ -390,12 +429,30 @@ async function generarExtra(){
             if(!payload.id_concepto||isNaN(payload.id_concepto)){showExtraError('Seleccioná un concepto');return;}
             if(!payload.monto||isNaN(payload.monto)){showExtraError('El monto es requerido');return;}
             const res=await fetch('/api/talones/generar-extra',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-            const data=await res.json();
+            
+            // Check if session expired
+            if(res.status === 401){
+                window.location.href='/login';
+                return;
+            }
+            
+            let data;
+            try {
+                data = await res.json();
+            } catch(e) {
+                console.error('Error parsing JSON:', e);
+                showExtraError('Error del servidor. Por favor, intentá de nuevo.');
+                return;
+            }
+            
             if(!res.ok){showExtraError(data.error||'Error');return;}
             document.getElementById('modalExtra').classList.add('hidden');
             document.getElementById('soloExtras').checked=true;
             cargarTalones();
         }
+    } catch(error) {
+        console.error('Error generating talones:', error);
+        showExtraError('Error inesperado. Por favor, intentá de nuevo.');
     } finally {
         btn.disabled=false;
         btn.textContent=_extraTab==='todos'?'Generar para todas':'Crear talón';
