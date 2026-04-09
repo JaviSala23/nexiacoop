@@ -2,7 +2,7 @@
     "listeners": [
         {
             "address": "0.0.0.0",
-            "port": 8848
+            "port": 8850
         }
     ],
     "app": {
@@ -23,7 +23,8 @@
             "passwd": "Celeste14",
             "connection_number": 5,
             "name": "main",
-            "auto_batch": false
+            "auto_batch": false,
+            "characterSet": "utf8mb4"
         }
     ]
 }

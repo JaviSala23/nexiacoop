@@ -157,11 +157,11 @@ CREATE TABLE IF NOT EXISTS usuarios (
 -- ------------------------------------------------------------
 -- DATOS INICIALES
 -- ------------------------------------------------------------
-INSERT INTO parametros (cuota_simple, cuota_con_responsable, mes_cobranza, anio_cobranza)
+INSERT IGNORE INTO parametros (cuota_simple, cuota_con_responsable, mes_cobranza, anio_cobranza)
 VALUES (5000.00, 8000.00, 3, 2026);
 
 -- Usuario admin inicial. Password: admin123 (SHA-256)
-INSERT INTO usuarios (username, password_hash, nombre, rol)
+INSERT IGNORE INTO usuarios (username, password_hash, nombre, rol)
 VALUES ('admin',
         SHA2('admin123', 256),
         'Administrador',
