@@ -49,7 +49,9 @@
     <!-- Acciones principales -->
     <div class="flex flex-wrap gap-3 mb-6">
         <button onclick="abrirModalGenerar()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-medium">Generar cuotas mensuales</button>
+        <button onclick="abrirModalFaltantes()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg font-medium">&#128203; Familias faltantes</button>
         <button onclick="abrirModalExtra()" class="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2 rounded-lg font-medium">+ Tal&oacute;n extra</button>
+        <button onclick="anularSeleccionados()" class="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-lg font-medium">&#10006; Anular seleccionados</button>
         <button onclick="imprimirTodos()" class="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg font-medium">&#128438; Imprimir todos</button>
         <button onclick="imprimirSeleccionados()" class="bg-teal-600 hover:bg-teal-700 text-white px-5 py-2 rounded-lg font-medium">&#128438; Imprimir seleccionados</button>
     </div>
@@ -125,6 +127,7 @@
 <div id="modalGenerar" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 hidden">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8">
         <h3 class="text-xl font-bold text-blue-900 mb-6">Generar Cuotas Mensuales</h3>
+        <p class="text-sm text-gray-500 mb-4">Genera cuotas para <b>todas las familias activas</b> que aún no tengan talón activo en el período.</p>
         <div class="space-y-4">
             <div>
                 <label class="text-xs text-gray-500">Mes *</label>
@@ -143,8 +146,51 @@
         <div id="genError" class="text-red-600 text-sm mt-3 hidden"></div>
         <div id="genMsg" class="text-green-700 text-sm mt-3 hidden"></div>
         <div class="flex justify-end gap-3 mt-6">
-            <button onclick="document.getElementById('modalGenerar').classList.add('hidden')" class="px-5 py-2 border rounded-lg text-gray-600">Cancelar</button>
+            <button onclick="cerrarModalGenerar()" class="px-5 py-2 border rounded-lg text-gray-600">Cancelar</button>
             <button onclick="generarTalones()" id="btnGenerar" class="px-5 py-2 bg-blue-600 text-white rounded-lg font-medium">Generar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Familias Faltantes -->
+<div id="modalFaltantes" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-8">
+        <h3 class="text-xl font-bold text-indigo-900 mb-4">Familias sin tal&oacute;n generado</h3>
+        <div class="flex gap-3 mb-4 items-end">
+            <div>
+                <label class="text-xs text-gray-500">Mes</label>
+                <select id="faltMes" class="mt-1 border rounded px-3 py-2 text-sm">
+                    <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
+                    <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
+                    <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
+                    <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+                </select>
+            </div>
+            <div>
+                <label class="text-xs text-gray-500">A&ntilde;o</label>
+                <input id="faltAnio" type="number" class="mt-1 border rounded px-3 py-2 text-sm w-24">
+            </div>
+            <button onclick="cargarFaltantes()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm">Buscar</button>
+        </div>
+        <div id="faltListaWrap" class="max-h-64 overflow-y-auto border rounded-lg hidden">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-50 sticky top-0">
+                    <tr>
+                        <th class="px-3 py-2 text-left"><input type="checkbox" id="faltSelTodos" onchange="toggleFaltTodos(this.checked)"></th>
+                        <th class="px-3 py-2 text-left text-gray-500">N&uacute;m.</th>
+                        <th class="px-3 py-2 text-left text-gray-500">Tutor</th>
+                        <th class="px-3 py-2 text-center text-gray-500">Alumnos</th>
+                    </tr>
+                </thead>
+                <tbody id="faltLista"></tbody>
+            </table>
+        </div>
+        <div id="faltVacio" class="text-center text-gray-400 text-sm py-6 hidden">Todas las familias tienen tal&oacute;n activo para ese per&iacute;odo.</div>
+        <div id="faltError" class="text-red-600 text-sm mt-3 hidden"></div>
+        <div id="faltMsg" class="text-green-700 text-sm mt-3 hidden"></div>
+        <div class="flex justify-end gap-3 mt-5">
+            <button onclick="document.getElementById('modalFaltantes').classList.add('hidden')" class="px-5 py-2 border rounded-lg text-gray-600">Cerrar</button>
+            <button onclick="generarFaltantes()" id="btnGenerarFalt" class="px-5 py-2 bg-indigo-600 text-white rounded-lg font-medium hidden">Generar seleccionadas</button>
         </div>
     </div>
 </div>
@@ -232,8 +278,6 @@ fetch('/api/auth/me').then(r=>r.json()).then(u=>{
     const ahora=new Date();
     document.getElementById('filtroMes').value=ahora.getMonth()+1;
     document.getElementById('filtroAnio').value=ahora.getFullYear();
-    document.getElementById('genMes').value=ahora.getMonth()+1;
-    document.getElementById('genAnio').value=ahora.getFullYear();
     fetch('/api/admin/parametros').then(r=>r.json()).then(p=>{ nombreInstitucion=p.nombre_institucion||'Cooperadora Escolar'; });
     cargarConceptos();
     cargarTalones();
@@ -311,46 +355,123 @@ function toggleSeleccionarTodos(checked){
 
 // ---------- Generar ----------
 function abrirModalGenerar(){
+    const ahora=new Date();
+    document.getElementById('genMes').value=ahora.getMonth()+1;
+    document.getElementById('genAnio').value=ahora.getFullYear();
     document.getElementById('genError').classList.add('hidden');
     document.getElementById('genMsg').classList.add('hidden');
     document.getElementById('modalGenerar').classList.remove('hidden');
+}
+function cerrarModalGenerar(){
+    document.getElementById('modalGenerar').classList.add('hidden');
 }
 async function generarTalones(){
     const mes=parseInt(document.getElementById('genMes').value);
     const anio=parseInt(document.getElementById('genAnio').value);
     const btn=document.getElementById('btnGenerar');
     btn.disabled=true;btn.textContent='Generando...';
-    
     try {
         const res=await fetch('/api/talones/generar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mes,anio})});
-        
-        // Check if session expired
-        if(res.status === 401){
-            window.location.href='/login';
-            return;
-        }
-        
-        let data;
-        try {
-            data = await res.json();
-        } catch(e) {
-            console.error('Error parsing JSON:', e);
-            document.getElementById('genError').textContent='Error del servidor. Por favor, intentá de nuevo.';
-            document.getElementById('genError').classList.remove('hidden');
-            return;
-        }
-        
+        if(res.status===401){window.location.href='/login';return;}
+        const data=await res.json().catch(()=>({}));
         btn.disabled=false;btn.textContent='Generar';
         if(!res.ok){document.getElementById('genError').textContent=data.error||'Error';document.getElementById('genError').classList.remove('hidden');return;}
-        document.getElementById('genMsg').textContent=data.mensaje||'Generados: '+data.generados;
+        document.getElementById('genMsg').textContent=data.mensaje||('Generados: '+data.generados);
         document.getElementById('genMsg').classList.remove('hidden');
-        setTimeout(()=>{document.getElementById('modalGenerar').classList.add('hidden');cargarTalones();},1500);
-    } catch(error) {
-        console.error('Error generating talones:', error);
+        setTimeout(()=>{cerrarModalGenerar();cargarTalones();},1500);
+    } catch(e){
         btn.disabled=false;btn.textContent='Generar';
-        document.getElementById('genError').textContent='Error inesperado. Por favor, intentá de nuevo.';
+        document.getElementById('genError').textContent='Error inesperado.';
         document.getElementById('genError').classList.remove('hidden');
     }
+}
+
+// ---------- Familias faltantes ----------
+function abrirModalFaltantes(){
+    const mes=parseInt(document.getElementById('filtroMes').value)||new Date().getMonth()+1;
+    const anio=parseInt(document.getElementById('filtroAnio').value)||new Date().getFullYear();
+    document.getElementById('faltMes').value=mes;
+    document.getElementById('faltAnio').value=anio;
+    document.getElementById('faltListaWrap').classList.add('hidden');
+    document.getElementById('faltVacio').classList.add('hidden');
+    document.getElementById('faltError').classList.add('hidden');
+    document.getElementById('faltMsg').classList.add('hidden');
+    document.getElementById('btnGenerarFalt').classList.add('hidden');
+    document.getElementById('faltLista').innerHTML='';
+    document.getElementById('modalFaltantes').classList.remove('hidden');
+}
+async function cargarFaltantes(){
+    const mes=document.getElementById('faltMes').value;
+    const anio=document.getElementById('faltAnio').value;
+    document.getElementById('faltError').classList.add('hidden');
+    document.getElementById('faltMsg').classList.add('hidden');
+    document.getElementById('faltListaWrap').classList.add('hidden');
+    document.getElementById('faltVacio').classList.add('hidden');
+    document.getElementById('btnGenerarFalt').classList.add('hidden');
+    try {
+        const data=await fetch(`/api/talones/familias-pendientes?mes=${mes}&anio=${anio}`).then(r=>r.json());
+        if(!Array.isArray(data)||data.length===0){
+            document.getElementById('faltVacio').classList.remove('hidden');
+            return;
+        }
+        const tbody=document.getElementById('faltLista');
+        tbody.innerHTML='';
+        data.forEach(f=>{
+            tbody.innerHTML+=`<tr class="hover:bg-gray-50">
+                <td class="px-3 py-1.5"><input type="checkbox" class="falt-sel" value="${f.id_familia}" checked></td>
+                <td class="px-3 py-1.5 font-bold">${f.numero_familia}</td>
+                <td class="px-3 py-1.5">${f.nombre_tutor_principal||'-'}</td>
+                <td class="px-3 py-1.5 text-center">${f.cantidad_alumnos}</td>
+            </tr>`;
+        });
+        document.getElementById('faltListaWrap').classList.remove('hidden');
+        document.getElementById('btnGenerarFalt').classList.remove('hidden');
+        document.getElementById('faltSelTodos').checked=true;
+    } catch(e){
+        document.getElementById('faltError').textContent='Error al cargar familias.';
+        document.getElementById('faltError').classList.remove('hidden');
+    }
+}
+function toggleFaltTodos(checked){
+    document.querySelectorAll('.falt-sel').forEach(cb=>cb.checked=checked);
+}
+async function generarFaltantes(){
+    const mes=parseInt(document.getElementById('faltMes').value);
+    const anio=parseInt(document.getElementById('faltAnio').value);
+    const selIds=[...document.querySelectorAll('.falt-sel:checked')].map(cb=>parseInt(cb.value));
+    if(!selIds.length){
+        document.getElementById('faltError').textContent='Seleccioná al menos una familia.';
+        document.getElementById('faltError').classList.remove('hidden'); return;
+    }
+    const btn=document.getElementById('btnGenerarFalt');
+    btn.disabled=true; btn.textContent='Generando...';
+    document.getElementById('faltError').classList.add('hidden');
+    document.getElementById('faltMsg').classList.add('hidden');
+    try {
+        const res=await fetch('/api/talones/generar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mes,anio,familias:selIds})});
+        if(res.status===401){window.location.href='/login';return;}
+        const data=await res.json().catch(()=>({}));
+        btn.disabled=false; btn.textContent='Generar seleccionadas';
+        if(!res.ok){document.getElementById('faltError').textContent=data.error||'Error';document.getElementById('faltError').classList.remove('hidden');return;}
+        document.getElementById('faltMsg').textContent=data.mensaje||('Generados: '+data.generados);
+        document.getElementById('faltMsg').classList.remove('hidden');
+        setTimeout(()=>{document.getElementById('modalFaltantes').classList.add('hidden');cargarTalones();},1500);
+    } catch(e){
+        btn.disabled=false; btn.textContent='Generar seleccionadas';
+        document.getElementById('faltError').textContent='Error inesperado.';
+        document.getElementById('faltError').classList.remove('hidden');
+    }
+}
+
+// ---------- Anular batch ----------
+async function anularSeleccionados(){
+    const ids=[...document.querySelectorAll('.sel-talon:checked')].map(cb=>parseInt(cb.value));
+    if(!ids.length){alert('Seleccioná al menos un talón para anular.');return;}
+    if(!confirm(`¿Anular ${ids.length} talón(es) seleccionado(s)?`))return;
+    const res=await fetch('/api/talones/anular-batch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ids})});
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok){alert(data.error||'Error al anular');return;}
+    cargarTalones();
 }
 
 // ---------- Extra ----------
@@ -487,11 +608,11 @@ async function guardarPrecio(){
     cargarTalones();
 }
 
-// ---------- Anular ----------
+// ---------- Anular individual ----------
 async function anularTalon(id){
     if(!confirm('¿Anular este talón?'))return;
     const res=await fetch('/api/talones/'+id+'/anular',{method:'POST'});
-    const data=await res.json();
+    const data=await res.json().catch(()=>({}));
     if(!data.ok)alert(data.error||'Error');
     else cargarTalones();
 }

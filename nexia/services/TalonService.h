@@ -29,7 +29,7 @@ public:
         std::function<void(int cantGenerados)> callback,
         std::function<void(const std::string&)> errCallback);
 
-    // Código de barra: FFFFFFAAAAMM_CONCEPTO (F=familia, A=anio, M=mes, C=id_concepto)
-    static std::string generarCodigoBarra(int numFamilia, int anio, int mes, int idConcepto);
+    // Código de barra mensual: NNNNNNAAAAMMCCC (N=numero_familia, A=anio, M=mes, C=id_concepto)
+    static std::string generarCodigoBarra(int numeroFamilia, int anio, int mes, int idConcepto);
 };
 

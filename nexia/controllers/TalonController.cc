@@ -1,6 +1,7 @@
 #include "TalonController.h"
 #include <drogon/drogon.h>
 #include "../repositories/TalonRepository.h"
+#include "../repositories/ConceptoRepository.h"
 #include "../services/TalonService.h"
 
 static Json::Value talonToJson(const Talon& t) {
@@ -186,6 +187,70 @@ void TalonController::anular(const drogon::HttpRequestPtr&,
         [callback]() {
             Json::Value res; res["ok"] = true;
             callback(drogon::HttpResponse::newHttpJsonResponse(res));
+        },
+        [callback](const std::string& e) {
+            LOG_ERROR << e;
+            Json::Value err; err["error"] = e;
+            auto r = drogon::HttpResponse::newHttpJsonResponse(err);
+            r->setStatusCode(drogon::k500InternalServerError); callback(r);
+        });
+}
+
+void TalonController::anularBatch(const drogon::HttpRequestPtr& req,
+    std::function<void(const drogon::HttpResponsePtr&)>&& callback)
+{
+    auto body = req->getJsonObject();
+    if (!body || !(*body)["ids"].isArray() || (*body)["ids"].empty()) {
+        Json::Value err; err["error"] = "Se requiere ids (array)";
+        auto r = drogon::HttpResponse::newHttpJsonResponse(err);
+        r->setStatusCode(drogon::k400BadRequest); callback(r); return;
+    }
+    std::vector<int> ids;
+    for (const auto& v : (*body)["ids"])
+        if (v.isInt()) ids.push_back(v.asInt());
+    if (ids.empty()) {
+        Json::Value err; err["error"] = "No se recibieron IDs válidos";
+        auto r = drogon::HttpResponse::newHttpJsonResponse(err);
+        r->setStatusCode(drogon::k400BadRequest); callback(r); return;
+    }
+    TalonRepository::anularBatch(ids,
+        [callback]() {
+            Json::Value res; res["ok"] = true;
+            callback(drogon::HttpResponse::newHttpJsonResponse(res));
+        },
+        [callback](const std::string& e) {
+            LOG_ERROR << e;
+            Json::Value err; err["error"] = e;
+            auto r = drogon::HttpResponse::newHttpJsonResponse(err);
+            r->setStatusCode(drogon::k500InternalServerError); callback(r);
+        });
+}
+
+void TalonController::familiasPendientes(const drogon::HttpRequestPtr& req,
+    std::function<void(const drogon::HttpResponsePtr&)>&& callback)
+{
+    auto ms = req->getParameter("mes");
+    auto as = req->getParameter("anio");
+    if (ms.empty() || as.empty()) {
+        Json::Value err; err["error"] = "Se requieren mes y anio";
+        auto r = drogon::HttpResponse::newHttpJsonResponse(err);
+        r->setStatusCode(drogon::k400BadRequest); callback(r); return;
+    }
+    int mes = std::stoi(ms), anio = std::stoi(as);
+
+    // Obtener el id del concepto MENSUAL primero
+    ConceptoRepository::buscarMensual(
+        [mes, anio, callback](const Concepto& concepto) {
+            TalonRepository::familiasSinTalonActivo(mes, anio, concepto.id_concepto,
+                [callback](Json::Value arr) {
+                    callback(drogon::HttpResponse::newHttpJsonResponse(arr));
+                },
+                [callback](const std::string& e) {
+                    LOG_ERROR << e;
+                    Json::Value err; err["error"] = e;
+                    auto r = drogon::HttpResponse::newHttpJsonResponse(err);
+                    r->setStatusCode(drogon::k500InternalServerError); callback(r);
+                });
         },
         [callback](const std::string& e) {
             LOG_ERROR << e;

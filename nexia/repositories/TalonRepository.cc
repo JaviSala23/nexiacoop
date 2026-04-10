@@ -107,18 +107,15 @@ void TalonRepository::insertarBatch(const std::vector<Talon>& talones,
     if (talones.empty()) { callback(); return; }
     auto db = app().getDbClient("main");
 
-    // Use prepared statement for safety
     std::string sql =
         "INSERT INTO talones (id_familia, id_concepto, mes, anio, monto, codigo_barra, observaciones) "
         "VALUES (?, ?, NULLIF(?,0), NULLIF(?,0), ?, ?, ?)";
-    
-    auto binder = *db << sql;
-    
-    // Insert each talon individually in a transaction for safety
+
+    // Insert each talon individually inside a transaction
     db->execSqlAsync("START TRANSACTION",
         [db, talones, sql, callback, errCallback](const Result&) {
-            std::function<void(size_t)> insertNext;
-            insertNext = [db, talones, sql, callback, errCallback, insertNext](size_t idx) {
+            auto insertNext = std::make_shared<std::function<void(size_t)>>();
+            *insertNext = [db, talones, sql, callback, errCallback, insertNext](size_t idx) {
                 if (idx >= talones.size()) {
                     db->execSqlAsync("COMMIT",
                         [callback](const Result&) { callback(); },
@@ -127,14 +124,14 @@ void TalonRepository::insertarBatch(const std::vector<Talon>& talones,
                 }
                 const auto& t = talones[idx];
                 db->execSqlAsync(sql,
-                    [insertNext, idx](const Result&) { insertNext(idx + 1); },
+                    [insertNext, idx](const Result&) { (*insertNext)(idx + 1); },
                     [db, errCallback](const DrogonDbException& e) {
                         db->execSqlAsync("ROLLBACK", [](const Result&){}, [](const DrogonDbException&){});
                         errCallback(e.base().what());
                     },
                     t.id_familia, t.id_concepto, t.mes, t.anio, t.monto, t.codigo_barra, t.observaciones);
             };
-            insertNext(0);
+            (*insertNext)(0);
         },
         [errCallback](const DrogonDbException& e) { errCallback(e.base().what()); });
 }
@@ -156,8 +153,12 @@ void TalonRepository::anular(int idTalon,
     std::function<void(const std::string&)> errCallback)
 {
     auto db = app().getDbClient("main");
+    // Al anular, renombramos codigo_barra para liberar el UNIQUE index y permitir
+    // regenerar el mismo período sin duplicados. El prefijo 'ANU<id>' es único.
     db->execSqlAsync(
-        "UPDATE talones SET estado='ANULADO' WHERE id_talon=?",
+        "UPDATE talones "
+        "SET estado='ANULADO', codigo_barra=CONCAT('ANU',id_talon,'_',codigo_barra) "
+        "WHERE id_talon=? AND estado!='ANULADO'",
         [callback](const Result&) { callback(); },
         [errCallback](const DrogonDbException& e) { errCallback(e.base().what()); },
         idTalon);
@@ -262,4 +263,81 @@ void TalonRepository::actualizarMonto(int idTalon, double monto,
         [callback](const drogon::orm::Result&) { callback(); },
         [errCallback](const drogon::orm::DrogonDbException& e) { errCallback(e.base().what()); },
         monto, idTalon);
+}
+
+void TalonRepository::eliminarAnuladosDeFamilias(int mes, int anio, int idConcepto,
+    const std::vector<int>& familiaIds,
+    std::function<void()> callback,
+    std::function<void(const std::string&)> errCallback)
+{
+    if (familiaIds.empty()) { callback(); return; }
+    auto db = app().getDbClient("main");
+    std::string inClause;
+    for (size_t i = 0; i < familiaIds.size(); ++i) {
+        if (i) inClause += ",";
+        inClause += std::to_string(familiaIds[i]);
+    }
+    db->execSqlAsync(
+        "DELETE FROM talones WHERE mes=" + std::to_string(mes) +
+        " AND anio=" + std::to_string(anio) +
+        " AND id_concepto=" + std::to_string(idConcepto) +
+        " AND estado='ANULADO' AND id_familia IN (" + inClause + ")",
+        [callback](const Result&) { callback(); },
+        [errCallback](const DrogonDbException& e) { errCallback(e.base().what()); });
+}
+
+void TalonRepository::anularBatch(const std::vector<int>& idTalones,
+    std::function<void()> callback,
+    std::function<void(const std::string&)> errCallback)
+{
+    if (idTalones.empty()) { callback(); return; }
+    auto db = app().getDbClient("main");
+    std::string inClause;
+    for (size_t i = 0; i < idTalones.size(); ++i) {
+        if (i) inClause += ",";
+        inClause += std::to_string(idTalones[i]);
+    }
+    // Renombramos codigo_barra al anular para liberar el UNIQUE index
+    db->execSqlAsync(
+        "UPDATE talones "
+        "SET estado='ANULADO', codigo_barra=CONCAT('ANU',id_talon,'_',codigo_barra) "
+        "WHERE id_talon IN (" + inClause + ") AND estado!='ANULADO'",
+        [callback](const Result&) { callback(); },
+        [errCallback](const DrogonDbException& e) { errCallback(e.base().what()); });
+}
+
+void TalonRepository::familiasSinTalonActivo(int mes, int anio, int idConcepto,
+    std::function<void(Json::Value)> callback,
+    std::function<void(const std::string&)> errCallback)
+{
+    auto db = app().getDbClient("main");
+    db->execSqlAsync(
+        "SELECT f.id_familia, f.numero_familia, "
+        "tp.nombre_completo AS nombre_tutor_principal, "
+        "(SELECT COUNT(*) FROM alumnos a WHERE a.id_familia=f.id_familia AND a.estado='ACTIVO') AS cantidad_alumnos "
+        "FROM familias f "
+        "LEFT JOIN tutores tp ON tp.id_familia=f.id_familia AND tp.es_principal=1 "
+        "WHERE f.estado='ACTIVA' "
+        "AND f.id_familia NOT IN ("
+        "  SELECT id_familia FROM talones "
+        "  WHERE mes=" + std::to_string(mes) +
+        "  AND anio=" + std::to_string(anio) +
+        "  AND id_concepto=" + std::to_string(idConcepto) +
+        "  AND estado!='ANULADO'"
+        ") "
+        "AND (SELECT COUNT(*) FROM alumnos a WHERE a.id_familia=f.id_familia AND a.estado='ACTIVO') > 0 "
+        "ORDER BY f.numero_familia",
+        [callback](const Result& r) {
+            Json::Value arr(Json::arrayValue);
+            for (const auto& row : r) {
+                Json::Value obj;
+                obj["id_familia"]            = row["id_familia"].as<int>();
+                obj["numero_familia"]         = row["numero_familia"].as<int>();
+                obj["nombre_tutor_principal"] = row["nombre_tutor_principal"].isNull() ? "" : row["nombre_tutor_principal"].as<std::string>();
+                obj["cantidad_alumnos"]       = row["cantidad_alumnos"].as<int>();
+                arr.append(obj);
+            }
+            callback(arr);
+        },
+        [errCallback](const DrogonDbException& e) { errCallback(e.base().what()); });
 }

@@ -44,6 +44,22 @@ public:
         std::function<void(std::vector<int>)> callback,
         std::function<void(const std::string&)> errCallback);
 
+    // Elimina talones ANULADOS de familias específicas para ese período
+    static void eliminarAnuladosDeFamilias(int mes, int anio, int idConcepto,
+        const std::vector<int>& familiaIds,
+        std::function<void()> callback,
+        std::function<void(const std::string&)> errCallback);
+
+    // Anula en batch una lista de talones
+    static void anularBatch(const std::vector<int>& idTalones,
+        std::function<void()> callback,
+        std::function<void(const std::string&)> errCallback);
+
+    // Familias activas que NO tienen talón activo para ese mes/año/concepto
+    static void familiasSinTalonActivo(int mes, int anio, int idConcepto,
+        std::function<void(Json::Value)> callback,
+        std::function<void(const std::string&)> errCallback);
+
     static void listarMorosos(
         std::function<void(Json::Value)> callback,
         std::function<void(const std::string&)> errCallback);
