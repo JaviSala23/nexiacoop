@@ -105,35 +105,33 @@ void TalonRepository::insertarBatch(const std::vector<Talon>& talones,
     std::function<void(const std::string&)> errCallback)
 {
     if (talones.empty()) { callback(); return; }
-    auto db = app().getDbClient("main");
 
-    std::string sql =
+    // Inserts sequenciales sin transacción explícita.
+    // Cada INSERT es auto-committed de forma independiente, evitando el problema
+    // de que START TRANSACTION / COMMIT caigan en conexiones distintas del pool.
+    // Con el rename-on-annul en anular(), no puede haber colisiones de codigo_barra.
+    auto talonesPtr = std::make_shared<std::vector<Talon>>(talones);
+    auto idx        = std::make_shared<size_t>(0);
+
+    static const std::string kSql =
         "INSERT INTO talones (id_familia, id_concepto, mes, anio, monto, codigo_barra, observaciones) "
         "VALUES (?, ?, NULLIF(?,0), NULLIF(?,0), ?, ?, ?)";
 
-    // Insert each talon individually inside a transaction
-    db->execSqlAsync("START TRANSACTION",
-        [db, talones, sql, callback, errCallback](const Result&) {
-            auto insertNext = std::make_shared<std::function<void(size_t)>>();
-            *insertNext = [db, talones, sql, callback, errCallback, insertNext](size_t idx) {
-                if (idx >= talones.size()) {
-                    db->execSqlAsync("COMMIT",
-                        [callback](const Result&) { callback(); },
-                        [errCallback](const DrogonDbException& e) { errCallback(e.base().what()); });
-                    return;
-                }
-                const auto& t = talones[idx];
-                db->execSqlAsync(sql,
-                    [insertNext, idx](const Result&) { (*insertNext)(idx + 1); },
-                    [db, errCallback](const DrogonDbException& e) {
-                        db->execSqlAsync("ROLLBACK", [](const Result&){}, [](const DrogonDbException&){});
-                        errCallback(e.base().what());
-                    },
-                    t.id_familia, t.id_concepto, t.mes, t.anio, t.monto, t.codigo_barra, t.observaciones);
-            };
-            (*insertNext)(0);
-        },
-        [errCallback](const DrogonDbException& e) { errCallback(e.base().what()); });
+    auto insertNext = std::make_shared<std::function<void()>>();
+    *insertNext = [talonesPtr, idx, callback, errCallback, insertNext]() {
+        if (*idx >= talonesPtr->size()) {
+            callback();
+            return;
+        }
+        const auto& t = (*talonesPtr)[*idx];
+        (*idx)++;
+        auto db = app().getDbClient("main");
+        db->execSqlAsync(kSql,
+            [insertNext](const Result&) { (*insertNext)(); },
+            [errCallback](const DrogonDbException& e) { errCallback(e.base().what()); },
+            t.id_familia, t.id_concepto, t.mes, t.anio, t.monto, t.codigo_barra, t.observaciones);
+    };
+    (*insertNext)();
 }
 
 void TalonRepository::marcarPagado(int idTalon,
