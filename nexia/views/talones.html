@@ -82,7 +82,7 @@
             <label class="text-xs text-gray-500">Estado</label>
             <select id="filtroEstado" class="mt-1 border rounded px-3 py-2 text-sm">
                 <option value="">Todos</option>
-                <option value="GENERADO">Generados</option>
+                <option value="GENERADO" selected>Generados</option>
                 <option value="PAGADO">Pagados</option>
                 <option value="ANULADO">Anulados</option>
             </select>
@@ -378,7 +378,7 @@ async function generarTalones(){
         if(!res.ok){document.getElementById('genError').textContent=data.error||'Error';document.getElementById('genError').classList.remove('hidden');return;}
         document.getElementById('genMsg').textContent=data.mensaje||('Generados: '+data.generados);
         document.getElementById('genMsg').classList.remove('hidden');
-        setTimeout(()=>{cerrarModalGenerar();cargarTalones();},1500);
+        setTimeout(()=>{cerrarModalGenerar();document.getElementById('filtroEstado').value='GENERADO';cargarTalones();},1500);
     } catch(e){
         btn.disabled=false;btn.textContent='Generar';
         document.getElementById('genError').textContent='Error inesperado.';
@@ -455,7 +455,7 @@ async function generarFaltantes(){
         if(!res.ok){document.getElementById('faltError').textContent=data.error||'Error';document.getElementById('faltError').classList.remove('hidden');return;}
         document.getElementById('faltMsg').textContent=data.mensaje||('Generados: '+data.generados);
         document.getElementById('faltMsg').classList.remove('hidden');
-        setTimeout(()=>{document.getElementById('modalFaltantes').classList.add('hidden');cargarTalones();},1500);
+        setTimeout(()=>{document.getElementById('modalFaltantes').classList.add('hidden');document.getElementById('filtroEstado').value='GENERADO';cargarTalones();},1500);
     } catch(e){
         btn.disabled=false; btn.textContent='Generar seleccionadas';
         document.getElementById('faltError').textContent='Error inesperado.';
