@@ -80,9 +80,24 @@
             <h3 id="tituloRifa" class="text-xl font-bold text-blue-800"></h3>
             <button onclick="cerrarPanel()" class="text-gray-400 hover:text-gray-600 text-sm">&#10005; Cerrar panel</button>
         </div>
-        <div class="flex flex-wrap gap-3 mb-4">
+        <div id="botonesAccionPanel" class="flex flex-wrap gap-3 mb-4">
             <button onclick="abrirModalAsignar()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium">+ Asignar número</button>
             <button onclick="asignarATodas()" class="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-lg text-sm font-medium">&#9889; Asignar a todas las familias</button>
+        </div>
+
+        <!-- Dashboard sorteo (solo para SORTEADA) -->
+        <div id="panelDashboardSorteo" class="hidden mb-6">
+            <div class="bg-blue-50 border border-blue-200 rounded-xl p-1 mb-4">
+                <div class="flex items-center justify-between px-4 pt-3 pb-2">
+                    <h4 class="font-bold text-blue-800 text-sm uppercase tracking-wide">&#128202; Resumen del sorteo</h4>
+                    <button onclick="imprimirResumenSorteo()" class="flex items-center gap-1.5 bg-white border border-blue-300 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg text-xs font-medium">&#128438; Imprimir resumen</button>
+                </div>
+                <div id="dashGridStats" class="grid grid-cols-2 md:grid-cols-4 gap-3 p-3"></div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-4">
+                <div id="dashMediosPago" class="bg-white rounded-xl shadow p-5"></div>
+                <div id="dashPremiosSorteo" class="bg-yellow-50 border border-yellow-200 rounded-xl p-5"></div>
+            </div>
         </div>
 
         <!-- Stats -->
@@ -574,9 +589,18 @@ async function abrirPanel(idRifa){
     document.getElementById('tituloRifa').textContent = '\u{1F3B2} '+rifaActual.nombre;
     document.getElementById('panelNumeros').classList.remove('hidden');
     document.getElementById('panelNumeros').scrollIntoView({behavior:'smooth'});
+
+    const esActiva = rifaActual.estado === 'ACTIVA';
+    document.getElementById('botonesAccionPanel').classList.toggle('hidden', !esActiva);
+
     await cargarNumeros();
-    if(rifaActual.estado==='SORTEADA') await cargarPremiosPanel();
-    else document.getElementById('panelPremios')?.remove();
+
+    if(rifaActual.estado==='SORTEADA'){
+        await renderDashboardSorteo();
+    } else {
+        document.getElementById('panelDashboardSorteo').classList.add('hidden');
+        document.getElementById('panelPremios')?.remove();
+    }
 }
 
 async function cargarPremiosPanel(){
@@ -684,6 +708,7 @@ function renderNumerosPagedo(lista){
     if(!pagina.length){ sinN.classList.remove('hidden'); }
     else {
         sinN.classList.add('hidden');
+        const esEditable = rifaActual && rifaActual.estado === 'ACTIVA';
         pagina.forEach(n=>{
             const ec = n.estado==='PAGADO' ? 'bg-green-100 text-green-700'
                      : n.estado==='PAGADO_PARCIAL' ? 'bg-yellow-100 text-yellow-700'
@@ -704,11 +729,11 @@ function renderNumerosPagedo(lista){
                 <td class="px-4 py-2 text-right font-mono text-sm">${moneda(n.saldo_pendiente)}</td>
                 <td class="px-4 py-2"><span class="px-2 py-0.5 rounded-full text-xs font-medium ${ec}">${n.estado.replace('_',' ')}</span></td>
                 <td class="px-4 py-2">
-                    <div class="flex flex-wrap gap-2 items-center">
+                    ${esEditable ? `<div class="flex flex-wrap gap-2 items-center">
                         ${n.estado!=='PAGADO'?`<button onclick="abrirCuotas(${n.id_numero},'${(n.id_familia>0?n.nombre_tutor_principal:n.nombre_externo).replace(/'/g,"\\'")}')" class="text-indigo-600 hover:underline text-xs font-medium">Cuotas</button>`:''}
                         <button onclick="abrirEditarComprador(${n.id_numero})" class="text-purple-500 hover:underline text-xs font-medium">Comprador</button>
                         <button onclick="anularNumero(${n.id_numero})" class="text-red-400 hover:text-red-600 text-xs">Anular</button>
-                    </div>
+                    </div>` : ''}
                 </td>
             </tr>`;
         });
@@ -779,7 +804,215 @@ function renderStats(numeros){
         <div class="bg-white rounded-lg shadow p-3 text-center"><div class="text-2xl font-bold text-green-700">${pagados}</div><div class="text-xs text-gray-500">Pagados</div></div>`;
 }
 
+// ===== DASHBOARD SORTEO =====
+async function renderDashboardSorteo(){
+    const dash = document.getElementById('panelDashboardSorteo');
+    dash.classList.remove('hidden');
+
+    const numeros  = _numerosAll;
+    const total    = rifaActual.cantidad_numeros;
+    const asignados= numeros.length;
+    const libres   = total - asignados;
+    const pagados  = numeros.filter(n=>n.estado==='PAGADO').length;
+    const parcial  = numeros.filter(n=>n.estado==='PAGADO_PARCIAL').length;
+    const sinPagar = numeros.filter(n=>n.estado==='ASIGNADO').length;
+    const pendiente= numeros.reduce((s,n)=>s+Number(n.saldo_pendiente||0),0);
+    const recaudado= Number(rifaActual.total_recaudado||0);
+    const pctVend  = total>0 ? Math.round(asignados/total*100) : 0;
+    const pctPag   = asignados>0 ? Math.round(pagados/asignados*100) : 0;
+
+    document.getElementById('dashGridStats').innerHTML = `
+        <div class="bg-white rounded-xl shadow p-4 text-center">
+            <div class="text-2xl font-bold text-blue-800">${asignados}<span class="text-sm font-normal text-gray-400"> / ${total}</span></div>
+            <div class="w-full bg-gray-200 rounded-full h-1.5 mt-2 mb-1"><div class="bg-blue-500 h-1.5 rounded-full" style="width:${pctVend}%"></div></div>
+            <div class="text-xs text-gray-500">N&uacute;meros vendidos (${pctVend}%)</div>
+            <div class="text-xs text-gray-400 mt-1">${libres} sin vender</div>
+        </div>
+        <div class="bg-white rounded-xl shadow p-4 text-center">
+            <div class="text-2xl font-bold text-green-700">${pagados}<span class="text-sm font-normal text-gray-400"> / ${asignados}</span></div>
+            <div class="w-full bg-gray-200 rounded-full h-1.5 mt-2 mb-1"><div class="bg-green-500 h-1.5 rounded-full" style="width:${pctPag}%"></div></div>
+            <div class="text-xs text-gray-500">Totalmente pagados (${pctPag}%)</div>
+            <div class="text-xs text-gray-400 mt-1">${parcial} pago parcial &middot; ${sinPagar} sin pagar</div>
+        </div>
+        <div class="bg-white rounded-xl shadow p-4 text-center">
+            <div class="text-xl font-bold text-emerald-700">${moneda(recaudado)}</div>
+            <div class="text-xs text-gray-500 mt-2">Total recaudado</div>
+            <div class="text-xs text-gray-400 mt-1">${rifaActual.cant_cuotas} cuota${rifaActual.cant_cuotas>1?'s':''} &middot; ${moneda(rifaActual.monto_total)}/n&uacute;m.</div>
+        </div>
+        <div class="bg-white rounded-xl shadow p-4 text-center">
+            <div class="text-xl font-bold text-amber-600">${moneda(pendiente)}</div>
+            <div class="text-xs text-gray-500 mt-2">Saldo pendiente</div>
+            <div class="text-xs text-gray-400 mt-1">de ${asignados} n&uacute;meros asignados</div>
+        </div>`;
+
+    // Medios de pago
+    try {
+        const stats = await fetch('/api/rifas/'+rifaActual.id_rifa+'/estadisticas').then(r=>r.json());
+        const colores = {'EFECTIVO':'bg-green-100 text-green-700','TRANSFERENCIA':'bg-blue-100 text-blue-700','MERCADOPAGO':'bg-indigo-100 text-indigo-700','OTRO':'bg-gray-100 text-gray-600','SIN_ESPECIFICAR':'bg-gray-100 text-gray-500'};
+        const medios = stats.medios_pago||[];
+        const totalMedios = medios.reduce((s,m)=>s+Number(m.total||0),0);
+        const filasMedios = medios.map(m=>{
+            const pct = totalMedios>0 ? Math.round(Number(m.total)/totalMedios*100) : 0;
+            const cls = colores[m.medio_pago]||'bg-gray-100 text-gray-600';
+            return `<tr class="border-t border-gray-100">
+                <td class="py-2 px-3"><span class="px-2 py-0.5 rounded-full text-xs ${cls}">${m.medio_pago}</span></td>
+                <td class="py-2 px-3 text-center text-sm">${m.cantidad}</td>
+                <td class="py-2 px-3 text-right font-mono font-semibold text-green-700">${moneda(m.total)}</td>
+                <td class="py-2 px-3 text-right text-xs text-gray-400">${pct}%</td>
+            </tr>`;
+        }).join('');
+        document.getElementById('dashMediosPago').innerHTML = `
+            <h4 class="font-bold text-gray-700 mb-3 text-sm uppercase tracking-wide">&#128179; Medios de Pago</h4>
+            ${filasMedios ? `<table class="w-full text-sm">
+                <thead><tr class="text-left text-xs text-gray-400 uppercase">
+                    <th class="px-3 pb-1">Medio</th><th class="px-3 pb-1 text-center">Cuotas</th><th class="px-3 pb-1 text-right">Total</th><th class="px-3 pb-1 text-right">%</th>
+                </tr></thead>
+                <tbody>${filasMedios}</tbody>
+                <tfoot><tr class="border-t-2 border-gray-200 font-semibold">
+                    <td class="py-2 px-3 text-xs text-gray-500">TOTAL</td>
+                    <td class="py-2 px-3 text-center text-sm">${medios.reduce((s,m)=>s+m.cantidad,0)}</td>
+                    <td class="py-2 px-3 text-right font-mono text-green-700">${moneda(totalMedios)}</td>
+                    <td></td>
+                </tr></tfoot>
+            </table>` : '<p class="text-sm text-gray-400">Sin pagos registrados</p>'}`;
+    } catch(e) {
+        document.getElementById('dashMediosPago').innerHTML = '<p class="text-sm text-gray-400">Error al cargar medios de pago</p>';
+    }
+
+    // Premios
+    try {
+        const premios = await fetch('/api/rifas/'+rifaActual.id_rifa+'/premios').then(r=>r.json());
+        if(premios.length){
+            const filasPremios = premios.map(p=>{
+                const valorStr = p.valor>0 ? moneda(p.valor) : '-';
+                const donado = p.fue_donado ? '<span class="text-xs text-gray-400 ml-1">(donado)</span>' : '';
+                return `<tr class="border-t border-yellow-100">
+                    <td class="py-2 px-2 font-bold text-yellow-700">${p.orden}&ordm;</td>
+                    <td class="py-2 px-2 font-mono font-bold text-blue-800">${p.numero_ganador||'-'}</td>
+                    <td class="py-2 px-2 text-sm">${p.nombre_ganador||'-'}</td>
+                    <td class="py-2 px-2 text-sm text-gray-600">${p.descripcion||'-'}</td>
+                    <td class="py-2 px-2 font-mono text-sm text-right">${valorStr}${donado}</td>
+                </tr>`;
+            }).join('');
+            document.getElementById('dashPremiosSorteo').innerHTML = `
+                <h4 class="font-bold text-yellow-800 mb-3 text-sm uppercase tracking-wide">&#127922; Premios</h4>
+                <table class="w-full text-sm">
+                    <thead><tr class="text-left text-xs text-yellow-600 uppercase">
+                        <th class="px-2 pb-1">#</th><th class="px-2 pb-1">N&uacute;m.</th><th class="px-2 pb-1">Ganador</th><th class="px-2 pb-1">Premio</th><th class="px-2 pb-1 text-right">Valor</th>
+                    </tr></thead>
+                    <tbody>${filasPremios}</tbody>
+                </table>`;
+        } else {
+            document.getElementById('dashPremiosSorteo').innerHTML = '<h4 class="font-bold text-yellow-800 mb-2 text-sm">&#127922; Premios</h4><p class="text-sm text-gray-400">Sin premios registrados</p>';
+        }
+    } catch(e) {
+        document.getElementById('dashPremiosSorteo').innerHTML = '<p class="text-sm text-gray-400">Error al cargar premios</p>';
+    }
+}
+
 // ===== ASIGNAR NÚMERO =====
+
+function imprimirResumenSorteo(){
+    if(!rifaActual) return;
+    const statsEl   = document.getElementById('dashGridStats')?.innerHTML || '';
+    const mediosEl  = document.getElementById('dashMediosPago')?.innerHTML || '';
+    const premiosEl = document.getElementById('dashPremiosSorteo')?.innerHTML || '';
+    const numeros   = _numerosAll;
+    const total     = rifaActual.cantidad_numeros;
+    const asignados = numeros.length;
+    const pagados   = numeros.filter(n=>n.estado==='PAGADO').length;
+    const pctPag    = asignados>0 ? Math.round(pagados/asignados*100) : 0;
+
+    // Tabla de números con saldo pendiente
+    const filasPend = numeros
+        .filter(n=>n.saldo_pendiente>0)
+        .sort((a,b)=>a.numero-b.numero)
+        .map(n=>{
+            const titular = n.id_familia>0
+                ? `Fam.${n.numero_familia} - ${n.nombre_tutor_principal||''}`
+                : `${n.nombre_externo} (ext.)`;
+            return `<tr style="border-bottom:1px solid #e5e7eb;">
+                <td style="padding:5px 8px;font-weight:bold;color:#1e3a5f;">${n.numero}</td>
+                <td style="padding:5px 8px;">${titular}</td>
+                <td style="padding:5px 8px;text-align:center;">${n.cuotas_pagadas}/${n.cant_cuotas}</td>
+                <td style="padding:5px 8px;text-align:right;font-family:monospace;color:#dc2626;">${moneda(n.saldo_pendiente)}</td>
+            </tr>`;
+        }).join('');
+
+    const fechaImp = new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});
+
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>Resumen - ${rifaActual.nombre}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; font-size: 13px; color: #111; padding: 20px; }
+  h1  { font-size: 20px; color: #1e3a5f; margin-bottom: 2px; }
+  h2  { font-size: 13px; color: #6b7280; font-weight: normal; margin-bottom: 16px; }
+  h3  { font-size: 12px; text-transform: uppercase; letter-spacing:.05em; color: #374151; margin-bottom: 8px; border-bottom:1px solid #e5e7eb; padding-bottom:4px; }
+  .grid4 { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:16px; }
+  .card  { border:1px solid #e5e7eb; border-radius:8px; padding:10px; text-align:center; }
+  .card .big { font-size:22px; font-weight:bold; color:#1e3a5f; }
+  .card .sub { font-size:11px; color:#6b7280; margin-top:4px; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+  table  { width:100%; border-collapse:collapse; font-size:12px; }
+  thead th { background:#f0f4ff; color:#1e3a5f; padding:5px 8px; text-align:left; font-size:11px; text-transform:uppercase; }
+  tfoot td { font-weight:bold; padding:5px 8px; border-top:2px solid #d1d5db; }
+  .sec { border:1px solid #e5e7eb; border-radius:8px; padding:12px; margin-bottom:16px; }
+  .sec-yellow { background:#fffbeb; border-color:#fde68a; }
+  .bar-wrap { background:#e5e7eb; border-radius:4px; height:6px; margin:4px 0 2px; }
+  .bar { height:6px; border-radius:4px; }
+  .footer { font-size:10px; color:#9ca3af; text-align:right; margin-top:16px; }
+  @media print { .no-print{display:none!important;} @page{margin:12mm;} }
+</style></head><body>
+<div class="no-print" style="margin-bottom:14px;display:flex;gap:10px;">
+  <button onclick="window.print()" style="background:#1e40af;color:#fff;border:none;padding:9px 22px;border-radius:6px;cursor:pointer;font-size:13px;">&#128438; Imprimir</button>
+  <button onclick="window.close()" style="background:#6b7280;color:#fff;border:none;padding:9px 22px;border-radius:6px;cursor:pointer;font-size:13px;">Cerrar</button>
+</div>
+<h1>&#127922; ${rifaActual.nombre}</h1>
+<h2>${rifaActual.descripcion||''} &nbsp;&mdash;&nbsp; Fecha sorteo: ${rifaActual.fecha_sorteo||'No definida'} &nbsp;&mdash;&nbsp; Impreso: ${fechaImp}</h2>
+
+<h3>Resumen de ventas</h3>
+<div class="grid4">
+  <div class="card"><div class="big">${total}</div><div class="sub">N&uacute;meros totales</div></div>
+  <div class="card"><div class="big" style="color:#4f46e5">${asignados}</div>
+    <div class="bar-wrap"><div class="bar" style="background:#6366f1;width:${total>0?Math.round(asignados/total*100):0}%"></div></div>
+    <div class="sub">Vendidos (${total>0?Math.round(asignados/total*100):0}%)</div></div>
+  <div class="card"><div class="big" style="color:#16a34a">${pagados}</div>
+    <div class="bar-wrap"><div class="bar" style="background:#22c55e;width:${pctPag}%"></div></div>
+    <div class="sub">Pagados (${pctPag}%)</div></div>
+  <div class="card"><div class="big" style="color:#059669">${moneda(Number(rifaActual.total_recaudado||0))}</div><div class="sub">Recaudado</div></div>
+</div>
+
+<div class="grid2">
+  <div class="sec">
+    <h3>Medios de pago</h3>
+    ${document.getElementById('dashMediosPago')?.querySelector('table')?.outerHTML || '<p style="color:#9ca3af;font-size:12px;">Sin pagos</p>'}
+  </div>
+  <div class="sec sec-yellow">
+    <h3>Premios</h3>
+    ${document.getElementById('dashPremiosSorteo')?.querySelector('table')?.outerHTML || '<p style="color:#9ca3af;font-size:12px;">Sin premios</p>'}
+  </div>
+</div>
+
+${filasPend ? `
+<h3>N&uacute;meros con saldo pendiente (${numeros.filter(n=>n.saldo_pendiente>0).length})</h3>
+<div class="sec">
+<table>
+  <thead><tr><th>N&uacute;m.</th><th>Titular</th><th style="text-align:center;">Cuotas</th><th style="text-align:right;">Saldo</th></tr></thead>
+  <tbody>${filasPend}</tbody>
+  <tfoot><tr>
+    <td colspan="3" style="text-align:right;padding:5px 8px;">Total pendiente:</td>
+    <td style="text-align:right;padding:5px 8px;color:#dc2626;font-family:monospace;">${moneda(numeros.reduce((s,n)=>s+Number(n.saldo_pendiente||0),0))}</td>
+  </tr></tfoot>
+</table></div>` : '<p style="color:#16a34a;font-size:12px;font-weight:bold;">&#10003; Todos los n&uacute;meros est&aacute;n totalmente pagados.</p>'}
+
+<div class="footer">Generado por NEXIA &middot; ${fechaImp}</div>
+</body></html>`;
+
+    const win = window.open('','_blank','width=900,height=750');
+    win.document.write(html);
+    win.document.close();
+}
 let _numerosDisponibles = [];
 
 async function abrirModalAsignar(){

@@ -20,6 +20,7 @@ public:
     ADD_METHOD_TO(RifaController::pagarCuotas,       "/api/rifas/cuotas/pagar",            Post, "AuthFilter");
     ADD_METHOD_TO(RifaController::sortear,           "/api/rifas/{id}/sortear",            Post, "AuthFilter");
     ADD_METHOD_TO(RifaController::listarPremios,     "/api/rifas/{id}/premios",            Get,  "AuthFilter");
+    ADD_METHOD_TO(RifaController::estadisticas,      "/api/rifas/{id}/estadisticas",       Get,  "AuthFilter");
     METHOD_LIST_END
 
     void pagina(const drogon::HttpRequestPtr&,
@@ -50,4 +51,6 @@ public:
                  std::function<void(const drogon::HttpResponsePtr&)>&&, int id);
     void listarPremios(const drogon::HttpRequestPtr&,
                        std::function<void(const drogon::HttpResponsePtr&)>&&, int id);
+    void estadisticas(const drogon::HttpRequestPtr&,
+                      std::function<void(const drogon::HttpResponsePtr&)>&&, int id);
 };

@@ -194,11 +194,12 @@
                 <label class="text-xs text-gray-500">A&ntilde;o</label>
                 <input id="histAnio" type="number" class="mt-1 border rounded px-3 py-2 text-sm w-24">
             </div>
-            <div>
-                <label class="text-xs text-gray-500">Familia</label>
-                <select id="histFamilia" class="mt-1 border rounded px-3 py-2 text-sm w-52">
-                    <option value="">Todas las familias</option>
-                </select>
+            <div class="relative">
+                <label class="text-xs text-gray-500">Familia / Tutor</label>
+                <input id="histFamiliaInput" type="text" placeholder="Buscar por n&uacute;m. o nombre..." autocomplete="off"
+                    class="mt-1 border rounded px-3 py-2 text-sm w-52" oninput="filtrarSugerenciasFamilia()" onfocus="filtrarSugerenciasFamilia()">
+                <input type="hidden" id="histFamilia">
+                <ul id="histFamiliaDropdown" class="absolute z-30 bg-white border border-gray-200 rounded-lg shadow-lg w-52 max-h-56 overflow-y-auto hidden text-sm" style="top:100%;left:0;"></ul>
             </div>
             <button onclick="cargarPagos()" class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded text-sm">Filtrar</button>
             <button onclick="limpiarFiltrosHistorial()" class="text-xs text-gray-400 hover:text-gray-600 underline self-end pb-1">Limpiar</button>
@@ -212,6 +213,8 @@
                         <th class="px-4 py-3 text-left">Familia</th>
                         <th class="px-4 py-3 text-left">Tutor</th>
                         <th class="px-4 py-3 text-left">Concepto</th>
+                        <th class="px-4 py-3 text-left">Período</th>
+
                         <th class="px-4 py-3 text-left">Fecha</th>
                         <th class="px-4 py-3 text-left">Medio</th>
                         <th class="px-4 py-3 text-right">Monto</th>
@@ -228,6 +231,7 @@
 <script>
 const mesesCortos=['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 let talonesListado=[];
+let _familiasHistorial=[];
 
 async function logout(){await fetch('/api/auth/logout',{method:'POST'});window.location.href='/login';}
 
@@ -282,13 +286,51 @@ async function cargarConceptosListado(){
 }
 
 async function cargarFamiliasHistorial(){
-    const familias=await fetch('/api/familias?estado=ACTIVA').then(r=>r.json()).catch(()=>[]);
-    const sel=document.getElementById('histFamilia');
-    sel.innerHTML='<option value="">Todas las familias</option>';
-    (familias||[]).forEach(f=>{
-        sel.innerHTML+=`<option value="${f.id_familia}">${f.numero_familia} \u2013 ${f.nombre_tutor_principal||''}</option>`;
-    });
+    _familiasHistorial=await fetch('/api/familias?estado=ACTIVA').then(r=>r.json()).catch(()=>[]);
 }
+
+function filtrarSugerenciasFamilia(){
+    const q=(document.getElementById('histFamiliaInput').value||'').toLowerCase().trim();
+    const dd=document.getElementById('histFamiliaDropdown');
+    if(!q&&!document.getElementById('histFamiliaInput').matches(':focus')){
+        dd.classList.add('hidden'); return;
+    }
+    const matches=_familiasHistorial.filter(f=>{
+        const num=String(f.numero_familia);
+        const nom=(f.nombre_tutor_principal||'').toLowerCase();
+        return !q || num.includes(q) || nom.includes(q);
+    }).slice(0,12);
+    if(!matches.length){dd.classList.add('hidden');return;}
+    dd.innerHTML='';
+    // Opción "Todas"
+    if(q===''){
+        const li=document.createElement('li');
+        li.className='px-3 py-2 hover:bg-blue-50 cursor-pointer text-gray-400 text-xs';
+        li.textContent='Todas las familias';
+        li.onmousedown=()=>seleccionarFamilia('','');
+        dd.appendChild(li);
+    }
+    matches.forEach(f=>{
+        const li=document.createElement('li');
+        li.className='px-3 py-2 hover:bg-blue-50 cursor-pointer';
+        li.innerHTML=`<span class="font-bold text-blue-800">${f.numero_familia}</span> &ndash; ${f.nombre_tutor_principal||''}`;
+        li.onmousedown=()=>seleccionarFamilia(f.id_familia, f.numero_familia+' – '+(f.nombre_tutor_principal||''));
+        dd.appendChild(li);
+    });
+    dd.classList.remove('hidden');
+}
+
+function seleccionarFamilia(id, texto){
+    document.getElementById('histFamilia').value=id;
+    document.getElementById('histFamiliaInput').value=texto;
+    document.getElementById('histFamiliaDropdown').classList.add('hidden');
+}
+
+document.addEventListener('click',e=>{
+    if(!e.target.closest('#histFamiliaInput')&&!e.target.closest('#histFamiliaDropdown')){
+        document.getElementById('histFamiliaDropdown')?.classList.add('hidden');
+    }
+});
 
 async function cargarListadoTalones(){
     const mes=document.getElementById('listMes').value;
@@ -493,10 +535,13 @@ async function cargarPagos(){
         const monto=Number(p.monto).toLocaleString('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0});
         const mc=medioCls[p.medio_pago]||'bg-gray-100 text-gray-600';
         const fecha=p.fecha_pago?p.fecha_pago.substring(0,10):'-';
+        const mesesNombres=['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+        const periodo=(p.mes&&p.anio)?(mesesNombres[p.mes]||p.mes)+' '+p.anio:'-';
         tbody.innerHTML+=`<tr class="hover:bg-gray-50">
             <td class="px-4 py-2 font-bold">${p.numero_familia}</td>
             <td class="px-4 py-2">${p.nombre_tutor_principal||'-'}</td>
             <td class="px-4 py-2">${p.nombre_concepto||'-'}</td>
+            <td class="px-4 py-2 text-gray-600 text-xs font-medium">${periodo}</td>
             <td class="px-4 py-2 text-gray-500">${fecha}</td>
             <td class="px-4 py-2"><span class="px-2 py-0.5 rounded-full text-xs ${mc}">${p.medio_pago}</span></td>
             <td class="px-4 py-2 text-right font-mono font-semibold">${monto}</td>
@@ -509,6 +554,7 @@ function limpiarFiltrosHistorial(){
     document.getElementById('histMes').value='';
     document.getElementById('histAnio').value='';
     document.getElementById('histFamilia').value='';
+    document.getElementById('histFamiliaInput').value='';
     cargarPagos();
 }
 

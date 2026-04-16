@@ -71,4 +71,8 @@ public:
     static void listarPremios(int idRifa,
         std::function<void(Json::Value)> callback,
         std::function<void(const std::string&)> errCallback);
+
+    static void estadisticasMedioPago(int idRifa,
+        std::function<void(Json::Value)> callback,
+        std::function<void(const std::string&)> errCallback);
 };

@@ -50,6 +50,7 @@ void PagoController::listar(const drogon::HttpRequestPtr& req,
             for (const auto& p : lista) {
                 Json::Value o;
                 o["id_pago"]              = p.id_pago;
+                o["id_talon"]             = p.id_talon;
                 o["numero_familia"]       = p.numero_familia;
                 o["nombre_tutor_principal"]= p.nombre_tutor_principal;
                 o["nombre_concepto"]      = p.nombre_concepto;

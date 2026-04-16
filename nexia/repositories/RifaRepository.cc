@@ -595,3 +595,32 @@ void RifaRepository::listarPremios(int idRifa,
         [errCallback](const DrogonDbException& e) { errCallback(e.base().what()); },
         idRifa);
 }
+
+void RifaRepository::estadisticasMedioPago(int idRifa,
+    std::function<void(Json::Value)> callback,
+    std::function<void(const std::string&)> errCallback)
+{
+    auto db = app().getDbClient("main");
+    db->execSqlAsync(
+        "SELECT COALESCE(rc.medio_pago,'SIN_ESPECIFICAR') AS medio_pago, "
+        "COUNT(*) AS cantidad, SUM(rc.monto) AS total "
+        "FROM rifa_cuotas rc "
+        "JOIN rifa_numeros rn ON rc.id_numero = rn.id_numero "
+        "WHERE rn.id_rifa = ? AND rc.estado = 'PAGADA' AND rn.estado != 'ANULADO' "
+        "GROUP BY rc.medio_pago ORDER BY total DESC",
+        [callback](const Result& rs) {
+            Json::Value result;
+            Json::Value medios(Json::arrayValue);
+            for (const auto& row : rs) {
+                Json::Value o;
+                o["medio_pago"] = row["medio_pago"].as<std::string>();
+                o["cantidad"]   = row["cantidad"].as<int>();
+                o["total"]      = row["total"].as<double>();
+                medios.append(o);
+            }
+            result["medios_pago"] = medios;
+            callback(result);
+        },
+        [errCallback](const DrogonDbException& e) { errCallback(e.base().what()); },
+        idRifa);
+}

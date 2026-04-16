@@ -404,3 +404,19 @@ void RifaController::listarPremios(const drogon::HttpRequestPtr&,
             r->setStatusCode(drogon::k500InternalServerError); callback(r);
         });
 }
+
+// ---------- Estadísticas medios de pago ----------
+void RifaController::estadisticas(const drogon::HttpRequestPtr&,
+    std::function<void(const drogon::HttpResponsePtr&)>&& callback, int id)
+{
+    RifaRepository::estadisticasMedioPago(id,
+        [callback](Json::Value data) {
+            callback(drogon::HttpResponse::newHttpJsonResponse(data));
+        },
+        [callback](const std::string& e) {
+            LOG_ERROR << e;
+            Json::Value err; err["error"] = e;
+            auto r = drogon::HttpResponse::newHttpJsonResponse(err);
+            r->setStatusCode(drogon::k500InternalServerError); callback(r);
+        });
+}
