@@ -274,8 +274,8 @@ void TalonController::generarPeriodo(const drogon::HttpRequestPtr& req,
     int anioInicio = (*body)["anio_inicio"].asInt();
     int numMeses   = (*body)["num_meses"].asInt();
 
-    if (numMeses != 3 && numMeses != 6 && numMeses != 12) {
-        Json::Value err; err["error"] = "num_meses debe ser 3, 6 o 12";
+    if (numMeses != 3 && numMeses != 6 && numMeses != 9 && numMeses != 12) {
+        Json::Value err; err["error"] = "num_meses debe ser 3, 6, 9 o 12";
         auto r = drogon::HttpResponse::newHttpJsonResponse(err);
         r->setStatusCode(drogon::k400BadRequest); callback(r); return;
     }

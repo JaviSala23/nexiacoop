@@ -51,6 +51,7 @@
     <div class="flex flex-wrap gap-3 mb-6">
         <button onclick="abrirModalGenerar()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-medium">Generar cuotas mensuales</button>
         <button onclick="abrirModalFaltantes()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg font-medium">&#128203; Familias faltantes</button>
+        <button onclick="abrirModalPeriodo()" class="bg-orange-500 hover:bg-orange-600 text-white px-5 py-2 rounded-lg font-medium">&#128197; Generar 3/6/9/12 meses</button>
         <button onclick="abrirModalExtra()" class="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2 rounded-lg font-medium">+ Tal&oacute;n extra</button>
         <button onclick="anularSeleccionados()" class="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-lg font-medium">&#10006; Anular seleccionados</button>
         <button onclick="imprimirTodos()" class="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg font-medium">&#128438; Imprimir todos</button>
@@ -244,6 +245,58 @@
         <div class="flex justify-end gap-3 mt-6">
             <button onclick="document.getElementById('modalExtra').classList.add('hidden')" class="px-5 py-2 border rounded-lg text-gray-600">Cancelar</button>
             <button id="btnCrearExtra" onclick="generarExtra()" class="px-5 py-2 bg-purple-600 text-white rounded-lg font-medium">Crear tal&oacute;n</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Generar Período -->
+<div id="modalPeriodo" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-8">
+        <h3 class="text-xl font-bold text-orange-700 mb-4">&#128197; Generar cuotas por per&iacute;odo</h3>
+        <p class="text-sm text-gray-500 mb-5">Seleccion&aacute; las familias y la cantidad de meses a generar a partir del mes de inicio.</p>
+        <div class="grid grid-cols-2 gap-4 mb-4">
+            <div>
+                <label class="text-xs text-gray-500">Mes inicio *</label>
+                <select id="periodoMes" class="mt-1 w-full border rounded px-3 py-2 text-sm">
+                    <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
+                    <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
+                    <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
+                    <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+                </select>
+            </div>
+            <div>
+                <label class="text-xs text-gray-500">A&ntilde;o *</label>
+                <input id="periodoAnio" type="number" class="mt-1 w-full border rounded px-3 py-2 text-sm">
+            </div>
+        </div>
+        <div class="mb-4">
+            <label class="text-xs text-gray-500 block mb-1">Cantidad de meses *</label>
+            <div class="flex gap-3">
+                <label class="flex items-center gap-1 text-sm cursor-pointer"><input type="radio" name="periodoMeses" value="3"> 3 meses</label>
+                <label class="flex items-center gap-1 text-sm cursor-pointer"><input type="radio" name="periodoMeses" value="6"> 6 meses</label>
+                <label class="flex items-center gap-1 text-sm cursor-pointer"><input type="radio" name="periodoMeses" value="9"> 9 meses</label>
+                <label class="flex items-center gap-1 text-sm cursor-pointer"><input type="radio" name="periodoMeses" value="12"> 12 meses</label>
+            </div>
+        </div>
+        <div class="mb-4">
+            <div class="flex justify-between items-center mb-1">
+                <label class="text-xs text-gray-500">Familias *</label>
+                <label class="flex items-center gap-1 text-xs text-gray-500 cursor-pointer">
+                    <input type="checkbox" id="periodoSelTodas" onchange="togglePeriodoTodas(this.checked)"> Seleccionar todas
+                </label>
+            </div>
+            <div id="periodoFamiliasWrap" class="border rounded-lg max-h-48 overflow-y-auto">
+                <table class="w-full text-sm">
+                    <tbody id="periodoFamiliasList"></tbody>
+                </table>
+            </div>
+            <div id="periodoFamiliasLoading" class="text-center text-gray-400 text-sm py-3">Cargando familias...</div>
+        </div>
+        <div id="periodoError" class="text-red-600 text-sm mt-2 hidden"></div>
+        <div id="periodoMsg" class="text-green-700 text-sm mt-2 hidden"></div>
+        <div class="flex justify-end gap-3 mt-5">
+            <button onclick="cerrarModalPeriodo()" class="px-5 py-2 border rounded-lg text-gray-600">Cancelar</button>
+            <button onclick="ejecutarGenerarPeriodo()" id="btnGenerarPeriodo" class="px-5 py-2 bg-orange-500 text-white rounded-lg font-medium">Generar</button>
         </div>
     </div>
 </div>
@@ -754,6 +807,96 @@ function imprimirUno(id){
     if(!t)return;
     if(t.estado==='ANULADO'){alert('No se puede imprimir un talón anulado.');return;}
     abrirVentanaImpresion([t]);
+}
+
+// ── Modal Generar Período ────────────────────────────────────────────
+async function abrirModalPeriodo() {
+    const modal = document.getElementById('modalPeriodo');
+    // Valores por defecto: mes actual, año actual
+    const hoy = new Date();
+    document.getElementById('periodoMes').value = hoy.getMonth() + 1;
+    document.getElementById('periodoAnio').value = hoy.getFullYear();
+    // Resetear radios
+    document.querySelectorAll('input[name="periodoMeses"]').forEach(r => r.checked = false);
+    document.querySelector('input[name="periodoMeses"][value="3"]').checked = true;
+    document.getElementById('periodoSelTodas').checked = false;
+    document.getElementById('periodoError').classList.add('hidden');
+    document.getElementById('periodoMsg').classList.add('hidden');
+    document.getElementById('btnGenerarPeriodo').disabled = false;
+    // Cargar familias
+    const wrap = document.getElementById('periodoFamiliasWrap');
+    const loading = document.getElementById('periodoFamiliasLoading');
+    const lista = document.getElementById('periodoFamiliasList');
+    wrap.classList.add('hidden');
+    loading.classList.remove('hidden');
+    lista.innerHTML = '';
+    modal.classList.remove('hidden');
+    try {
+        const familias = await fetch('/api/familias?estado=ACTIVA').then(r => r.json());
+        lista.innerHTML = (familias || []).map(f =>
+            `<tr class="border-b last:border-0 hover:bg-gray-50">
+                <td class="px-3 py-1.5"><input type="checkbox" class="periodo-fam-sel" value="${f.id_familia}"></td>
+                <td class="px-3 py-1.5 font-bold">${f.numero_familia}</td>
+                <td class="px-3 py-1.5">${f.nombre_tutor_principal || ''}</td>
+            </tr>`
+        ).join('');
+        loading.classList.add('hidden');
+        wrap.classList.remove('hidden');
+    } catch(e) {
+        loading.textContent = 'Error al cargar familias.';
+    }
+}
+
+function cerrarModalPeriodo() {
+    document.getElementById('modalPeriodo').classList.add('hidden');
+}
+
+function togglePeriodoTodas(checked) {
+    document.querySelectorAll('.periodo-fam-sel').forEach(cb => cb.checked = checked);
+}
+
+async function ejecutarGenerarPeriodo() {
+    const mesInicio = parseInt(document.getElementById('periodoMes').value);
+    const anioInicio = parseInt(document.getElementById('periodoAnio').value);
+    const numMesesEl = document.querySelector('input[name="periodoMeses"]:checked');
+    const errEl = document.getElementById('periodoError');
+    const msgEl = document.getElementById('periodoMsg');
+    errEl.classList.add('hidden');
+    msgEl.classList.add('hidden');
+
+    if (!anioInicio || anioInicio < 2000) {
+        errEl.textContent = 'Ingresá un año válido.'; errEl.classList.remove('hidden'); return;
+    }
+    if (!numMesesEl) {
+        errEl.textContent = 'Seleccioná la cantidad de meses.'; errEl.classList.remove('hidden'); return;
+    }
+    const numMeses = parseInt(numMesesEl.value);
+    const selIds = [...document.querySelectorAll('.periodo-fam-sel:checked')].map(cb => parseInt(cb.value));
+    if (!selIds.length) {
+        errEl.textContent = 'Seleccioná al menos una familia.'; errEl.classList.remove('hidden'); return;
+    }
+
+    const btn = document.getElementById('btnGenerarPeriodo');
+    btn.disabled = true;
+    btn.textContent = 'Generando...';
+    try {
+        const res = await fetch('/api/talones/generar-periodo', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mes_inicio: mesInicio, anio_inicio: anioInicio, num_meses: numMeses, familias: selIds })
+        });
+        const data = await res.json();
+        if (!res.ok || data.error) {
+            errEl.textContent = data.error || 'Error al generar.'; errEl.classList.remove('hidden');
+            btn.disabled = false; btn.textContent = 'Generar'; return;
+        }
+        msgEl.textContent = data.mensaje || `Se generaron ${data.generados} talones.`;
+        msgEl.classList.remove('hidden');
+        setTimeout(() => { cerrarModalPeriodo(); cargarTalones(); }, 1500);
+    } catch(e) {
+        errEl.textContent = 'Error de conexión.'; errEl.classList.remove('hidden');
+        btn.disabled = false; btn.textContent = 'Generar';
+    }
 }
 </script>
 </body></html>
