@@ -259,3 +259,56 @@ void TalonController::familiasPendientes(const drogon::HttpRequestPtr& req,
             r->setStatusCode(drogon::k500InternalServerError); callback(r);
         });
 }
+
+void TalonController::generarPeriodo(const drogon::HttpRequestPtr& req,
+    std::function<void(const drogon::HttpResponsePtr&)>&& callback)
+{
+    auto body = req->getJsonObject();
+    if (!body || !(*body)["mes_inicio"].isInt() || !(*body)["anio_inicio"].isInt() || !(*body)["num_meses"].isInt()) {
+        Json::Value err; err["error"] = "Se requieren mes_inicio, anio_inicio y num_meses";
+        auto r = drogon::HttpResponse::newHttpJsonResponse(err);
+        r->setStatusCode(drogon::k400BadRequest); callback(r); return;
+    }
+
+    int mesInicio  = (*body)["mes_inicio"].asInt();
+    int anioInicio = (*body)["anio_inicio"].asInt();
+    int numMeses   = (*body)["num_meses"].asInt();
+
+    if (numMeses != 3 && numMeses != 6 && numMeses != 12) {
+        Json::Value err; err["error"] = "num_meses debe ser 3, 6 o 12";
+        auto r = drogon::HttpResponse::newHttpJsonResponse(err);
+        r->setStatusCode(drogon::k400BadRequest); callback(r); return;
+    }
+    if (mesInicio < 1 || mesInicio > 12) {
+        Json::Value err; err["error"] = "mes_inicio inválido";
+        auto r = drogon::HttpResponse::newHttpJsonResponse(err);
+        r->setStatusCode(drogon::k400BadRequest); callback(r); return;
+    }
+
+    std::vector<int> familiaIds;
+    if (body->isMember("familias") && (*body)["familias"].isArray()) {
+        for (const auto& v : (*body)["familias"])
+            if (v.isInt()) familiaIds.push_back(v.asInt());
+    }
+    if (familiaIds.empty()) {
+        Json::Value err; err["error"] = "Debe seleccionar al menos una familia";
+        auto r = drogon::HttpResponse::newHttpJsonResponse(err);
+        r->setStatusCode(drogon::k400BadRequest); callback(r); return;
+    }
+
+    TalonService::generarPeriodo(mesInicio, anioInicio, numMeses, std::move(familiaIds),
+        [callback, numMeses](int cant) {
+            Json::Value res;
+            res["ok"]        = true;
+            res["generados"] = cant;
+            res["mensaje"]   = "Se generaron " + std::to_string(cant) +
+                               " talones en " + std::to_string(numMeses) + " meses";
+            callback(drogon::HttpResponse::newHttpJsonResponse(res));
+        },
+        [callback](const std::string& e) {
+            LOG_ERROR << e;
+            Json::Value err; err["error"] = e;
+            auto r = drogon::HttpResponse::newHttpJsonResponse(err);
+            r->setStatusCode(drogon::k400BadRequest); callback(r);
+        });
+}

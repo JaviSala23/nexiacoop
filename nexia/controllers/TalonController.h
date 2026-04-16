@@ -15,6 +15,7 @@ public:
     ADD_METHOD_TO(TalonController::anular,              "/api/talones/{id}/anular",          Post,"AuthFilter");
     ADD_METHOD_TO(TalonController::anularBatch,         "/api/talones/anular-batch",         Post,"AuthFilter");
     ADD_METHOD_TO(TalonController::familiasPendientes,  "/api/talones/familias-pendientes",  Get, "AuthFilter");
+    ADD_METHOD_TO(TalonController::generarPeriodo,       "/api/talones/generar-periodo",       Post,"AuthFilter");
     METHOD_LIST_END
 
     void pagina(const drogon::HttpRequestPtr&,
@@ -35,4 +36,6 @@ public:
                     std::function<void(const drogon::HttpResponsePtr&)>&&);
     void familiasPendientes(const drogon::HttpRequestPtr&,
                             std::function<void(const drogon::HttpResponsePtr&)>&&);
+    void generarPeriodo(const drogon::HttpRequestPtr&,
+                        std::function<void(const drogon::HttpResponsePtr&)>&&);
 };

@@ -248,3 +248,44 @@ void TalonService::generarExtraBatch(int idConcepto, double monto,
         },
         errCallback);
 }
+
+// -------------------------------------------------------
+// Generar talones de cuota mensual para familias específicas
+// durante N meses consecutivos (3, 6 o 12)
+// -------------------------------------------------------
+void TalonService::generarPeriodo(int mesInicio, int anioInicio, int numMeses,
+    std::vector<int> familiaIds,
+    std::function<void(int)> callback,
+    std::function<void(const std::string&)> errCallback)
+{
+    auto total      = std::make_shared<int>(0);
+    auto mesActual  = std::make_shared<int>(mesInicio);
+    auto anioActual = std::make_shared<int>(anioInicio);
+    auto remaining  = std::make_shared<int>(numMeses);
+
+    auto proc = std::make_shared<std::function<void()>>();
+    *proc = [proc, mesActual, anioActual, remaining, familiaIds, total, callback, errCallback]() mutable {
+        if (*remaining <= 0) {
+            callback(*total);
+            return;
+        }
+
+        int mes  = *mesActual;
+        int anio = *anioActual;
+        (*remaining)--;
+
+        // Avanzar al siguiente mes
+        (*mesActual)++;
+        if (*mesActual > 12) { *mesActual = 1; (*anioActual)++; }
+
+        TalonService::generarParaFamilias(mes, anio, familiaIds,
+            [proc, total](int cant) {
+                *total += cant;
+                (*proc)();
+            },
+            [errCallback](const std::string& e) {
+                errCallback(e);
+            });
+    };
+    (*proc)();
+}

@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexia - Rifas</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+@media print {
+    body > * { display: none !important; }
+    #zonaImpresion { display: block !important; }
+}
+#zonaImpresion { display: none; }
+</style>
+</head>
+<body class="bg-gray-100 min-h-screen flex">
+<!-- Sidebar -->
+<aside class="w-64 bg-blue-900 text-white flex flex-col min-h-screen fixed">
+    <div class="p-6 border-b border-blue-700">
+        <h1 class="text-2xl font-bold">NEXIA</h1>
+        <p class="text-blue-300 text-xs mt-1">Cooperadora Escolar</p>
+    </div>
+    <nav class="flex-1 p-4 space-y-1">
+        <a href="/dashboard"    class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">&#127968; Dashboard</a>
+        <a href="/familias"     class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">&#128106; Familias</a>
+        <a href="/alumnos"      class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">&#127890; Alumnos</a>
+        <a href="/talones"      class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">&#129534; Talones</a>
+        <a href="/pagos"        class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">&#128179; Pagos</a>
+        <a href="/rifas"        class="flex items-center gap-3 px-4 py-2 rounded-lg bg-blue-700 font-medium">&#127922; Rifas</a>
+        <a href="/conceptos"    class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">&#128194; Conceptos</a>
+        <a href="/contabilidad" class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">&#128202; Contabilidad</a>
+        <a href="/admin"        class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-700">&#9881; Admin</a>
+    </nav>
+    <div class="p-4 border-t border-blue-700">
+        <span id="userInfo" class="text-blue-300 text-sm"></span>
+        <button onclick="logout()" class="mt-2 w-full text-left text-sm text-red-300 hover:text-red-200">Cerrar sesi&oacute;n</button>
+    </div>
+</aside>
+
+<main class="ml-64 flex-1 p-8">
+    <h2 class="text-2xl font-bold text-blue-900 mb-6">Rifas</h2>
+
+    <!-- Acciones -->
+    <div class="flex flex-wrap gap-3 mb-6">
+        <button onclick="abrirModalRifa(null)" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-medium">+ Nueva rifa</button>
+    </div>
+
+    <!-- Lista de rifas -->
+    <div id="listaRifas" class="grid grid-cols-1 gap-4 mb-8"></div>
+    <p id="sinRifas" class="text-center text-gray-400 py-8 hidden">No hay rifas creadas.</p>
+
+    <!-- Panel de números (se muestra al seleccionar una rifa) -->
+    <div id="panelNumeros" class="hidden">
+        <div class="flex items-center justify-between mb-4">
+            <h3 id="tituloRifa" class="text-xl font-bold text-blue-800"></h3>
+            <button onclick="cerrarPanel()" class="text-gray-400 hover:text-gray-600 text-sm">&#10005; Cerrar panel</button>
+        </div>
+        <div class="flex flex-wrap gap-3 mb-4">
+            <button onclick="abrirModalAsignar()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium">+ Asignar número</button>
+            <button onclick="asignarATodas()" class="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-lg text-sm font-medium">&#9889; Asignar a todas las familias</button>
+            <button onclick="imprimirCartones()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium">&#128438; Imprimir cartones</button>
+        </div>
+
+        <!-- Stats -->
+        <div id="statsRifa" class="grid grid-cols-4 gap-4 mb-5"></div>
+
+        <!-- Tabla de números -->
+        <div class="bg-white rounded-xl shadow overflow-hidden">
+            <table class="w-full text-sm">
+                <thead class="bg-blue-50 text-blue-800">
+                    <tr>
+                        <th class="px-4 py-3 text-left">N&uacute;m.</th>
+                        <th class="px-4 py-3 text-left">Titular</th>
+                        <th class="px-4 py-3 text-left">Tel&eacute;fono</th>
+                        <th class="px-4 py-3 text-center">Cuotas</th>
+                        <th class="px-4 py-3 text-right">Saldo pend.</th>
+                        <th class="px-4 py-3 text-left">Estado</th>
+                        <th class="px-4 py-3 text-left">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaNumeros" class="divide-y divide-gray-100"></tbody>
+            </table>
+            <p id="sinNumeros" class="text-center text-gray-400 py-6 hidden">No hay números asignados.</p>
+        </div>
+    </div>
+</main>
+
+<!-- Zona impresión -->
+<div id="zonaImpresion"></div>
+
+<!-- ===== MODAL RIFA ===== -->
+<div id="modalRifa" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-8">
+        <h3 id="tituloModalRifa" class="text-xl font-bold text-blue-900 mb-6">Nueva Rifa</h3>
+        <input type="hidden" id="rifaId">
+        <div class="grid grid-cols-2 gap-4">
+            <div class="col-span-2">
+                <label class="text-xs text-gray-500">Nombre *</label>
+                <input id="rifaNombre" type="text" class="mt-1 w-full border rounded px-3 py-2 text-sm">
+            </div>
+            <div class="col-span-2">
+                <label class="text-xs text-gray-500">Descripci&oacute;n</label>
+                <input id="rifaDescripcion" type="text" class="mt-1 w-full border rounded px-3 py-2 text-sm">
+            </div>
+            <div>
+                <label class="text-xs text-gray-500">Cantidad de n&uacute;meros *</label>
+                <input id="rifaCantNum" type="number" min="1" class="mt-1 w-full border rounded px-3 py-2 text-sm" value="100">
+            </div>
+            <div>
+                <label class="text-xs text-gray-500">Cantidad de cuotas *</label>
+                <input id="rifaCantCuotas" type="number" min="1" max="12" class="mt-1 w-full border rounded px-3 py-2 text-sm" value="1" oninput="calcMontoCuota()">
+            </div>
+            <div>
+                <label class="text-xs text-gray-500">Monto total por n&uacute;mero *</label>
+                <input id="rifaMontoTotal" type="number" min="0" step="0.01" class="mt-1 w-full border rounded px-3 py-2 text-sm" oninput="calcMontoCuota()">
+            </div>
+            <div>
+                <label class="text-xs text-gray-500">Monto por cuota</label>
+                <input id="rifaMontoCuota" type="number" min="0" step="0.01" class="mt-1 w-full border rounded px-3 py-2 text-sm bg-gray-50" readonly>
+            </div>
+            <div>
+                <label class="text-xs text-gray-500">Fecha sorteo</label>
+                <input id="rifaFechaSorteo" type="date" class="mt-1 w-full border rounded px-3 py-2 text-sm">
+            </div>
+            <div>
+                <label class="text-xs text-gray-500">Cuenta contable</label>
+                <select id="rifaCuenta" class="mt-1 w-full border rounded px-3 py-2 text-sm">
+                    <option value="">Sin vincular</option>
+                </select>
+            </div>
+            <div id="rifaEstadoWrap" class="hidden">
+                <label class="text-xs text-gray-500">Estado</label>
+                <select id="rifaEstado" class="mt-1 w-full border rounded px-3 py-2 text-sm">
+                    <option value="ACTIVA">Activa</option>
+                    <option value="CERRADA">Cerrada</option>
+                    <option value="SORTEADA">Sorteada</option>
+                </select>
+            </div>
+        </div>
+        <div id="rifaError" class="text-red-600 text-sm mt-3 hidden"></div>
+        <div class="flex justify-end gap-3 mt-6">
+            <button onclick="cerrarModalRifa()" class="px-5 py-2 border rounded-lg text-gray-600">Cancelar</button>
+            <button onclick="guardarRifa()" id="btnGuardarRifa" class="px-5 py-2 bg-blue-600 text-white rounded-lg font-medium">Guardar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== MODAL ASIGNAR NÚMERO ===== -->
+<div id="modalAsignar" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
+        <h3 class="text-xl font-bold text-green-800 mb-5">Asignar N&uacute;mero</h3>
+
+        <!-- Tabs -->
+        <div class="flex border-b mb-5">
+            <button id="tabFamilia" onclick="switchTabAsignar('familia')" class="px-4 py-2 text-sm font-medium border-b-2 border-green-600 text-green-700">Familia</button>
+            <button id="tabExterno" onclick="switchTabAsignar('externo')" class="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">Externo</button>
+        </div>
+
+        <div class="space-y-4">
+            <div>
+                <label class="text-xs text-gray-500">N&uacute;mero de rifa *</label>
+                <select id="asigNumero" class="mt-1 w-full border rounded px-3 py-2 text-sm"></select>
+            </div>
+
+            <!-- Panel familia -->
+            <div id="panelFamilia" class="space-y-3">
+                <label class="text-xs text-gray-500">Familia *</label>
+                <select id="asigFamilia" class="mt-1 w-full border rounded px-3 py-2 text-sm"></select>
+            </div>
+
+            <!-- Panel externo -->
+            <div id="panelExterno" class="space-y-3 hidden">
+                <div>
+                    <label class="text-xs text-gray-500">Nombre *</label>
+                    <input id="asigNombreExt" type="text" class="mt-1 w-full border rounded px-3 py-2 text-sm">
+                </div>
+                <div>
+                    <label class="text-xs text-gray-500">Tel&eacute;fono</label>
+                    <input id="asigTelExt" type="text" class="mt-1 w-full border rounded px-3 py-2 text-sm">
+                </div>
+            </div>
+        </div>
+
+        <div id="asigError" class="text-red-600 text-sm mt-3 hidden"></div>
+        <div class="flex justify-end gap-3 mt-6">
+            <button onclick="document.getElementById('modalAsignar').classList.add('hidden')" class="px-5 py-2 border rounded-lg text-gray-600">Cancelar</button>
+            <button onclick="confirmarAsignar()" id="btnAsignar" class="px-5 py-2 bg-green-600 text-white rounded-lg font-medium">Asignar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== MODAL CUOTAS ===== -->
+<div id="modalCuotas" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
+        <h3 id="tituloCuotas" class="text-xl font-bold text-indigo-800 mb-4">Cuotas</h3>
+        <div id="listaCuotas" class="space-y-2 mb-4 max-h-72 overflow-y-auto"></div>
+        <div class="mb-4">
+            <label class="text-xs text-gray-500">Medio de pago</label>
+            <select id="cuotaMedio" class="mt-1 w-full border rounded px-3 py-2 text-sm">
+                <option value="EFECTIVO">Efectivo</option>
+                <option value="TRANSFERENCIA">Transferencia</option>
+                <option value="MERCADOPAGO">MercadoPago</option>
+                <option value="OTRO">Otro</option>
+            </select>
+        </div>
+        <div id="cuotaError" class="text-red-600 text-sm mt-2 hidden"></div>
+        <div class="flex justify-end gap-3 mt-4">
+            <button onclick="document.getElementById('modalCuotas').classList.add('hidden')" class="px-5 py-2 border rounded-lg text-gray-600">Cerrar</button>
+            <button onclick="pagarSeleccionadas()" id="btnPagarCuotas" class="px-5 py-2 bg-indigo-600 text-white rounded-lg font-medium">Pagar seleccionadas</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let rifasData = [];
+let rifaActual = null;
+let familiasList = [];
+let cuentasList = [];
+let _tabAsignar = 'familia';
+
+async function logout(){ await fetch('/api/auth/logout',{method:'POST'}); window.location.href='/login'; }
+
+fetch('/api/auth/me').then(r=>r.json()).then(u=>{
+    if(!u.id){ window.location.href='/login'; return; }
+    document.getElementById('userInfo').textContent = u.nombre+' ('+u.rol+')';
+    cargarDatos();
+});
+
+async function cargarDatos(){
+    [familiasList, cuentasList] = await Promise.all([
+        fetch('/api/familias?estado=ACTIVA').then(r=>r.json()).catch(()=>[]),
+        fetch('/api/contabilidad/cuentas').then(r=>r.json()).catch(()=>[])
+    ]);
+    // Poblar select de cuentas en modal rifa
+    const selC = document.getElementById('rifaCuenta');
+    selC.innerHTML = '<option value="">Sin vincular</option>';
+    (cuentasList||[]).filter(c=>c.activo && c.tipo==='INGRESO').forEach(c=>{
+        selC.innerHTML += `<option value="${c.id_cuenta}">${c.codigo} - ${c.nombre}</option>`;
+    });
+    cargarRifas();
+}
+
+async function cargarRifas(){
+    rifasData = await fetch('/api/rifas').then(r=>r.json()).catch(()=>[]);
+    renderRifas();
+}
+
+const moneda = v => Number(v).toLocaleString('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0});
+
+function renderRifas(){
+    const cont = document.getElementById('listaRifas');
+    const sinR = document.getElementById('sinRifas');
+    cont.innerHTML = '';
+    if(!rifasData.length){ sinR.classList.remove('hidden'); return; }
+    sinR.classList.add('hidden');
+    rifasData.forEach(r=>{
+        const ec = r.estado==='ACTIVA' ? 'bg-green-100 text-green-700'
+                 : r.estado==='SORTEADA' ? 'bg-blue-100 text-blue-700'
+                 : 'bg-gray-100 text-gray-500';
+        const pct = r.cantidad_numeros > 0 ? Math.round(r.numeros_asignados/r.cantidad_numeros*100) : 0;
+        cont.innerHTML += `
+        <div class="bg-white rounded-xl shadow p-5 flex flex-col gap-3">
+            <div class="flex items-start justify-between">
+                <div>
+                    <h4 class="text-lg font-bold text-blue-900">${r.nombre}</h4>
+                    ${r.descripcion ? `<p class="text-sm text-gray-500">${r.descripcion}</p>` : ''}
+                    ${r.fecha_sorteo ? `<p class="text-xs text-gray-400 mt-1">Sorteo: ${r.fecha_sorteo}</p>` : ''}
+                </div>
+                <span class="px-3 py-1 rounded-full text-xs font-medium ${ec}">${r.estado}</span>
+            </div>
+            <div class="grid grid-cols-4 gap-3 text-center">
+                <div class="bg-gray-50 rounded-lg p-2"><div class="text-lg font-bold text-blue-800">${r.cantidad_numeros}</div><div class="text-xs text-gray-500">Números totales</div></div>
+                <div class="bg-gray-50 rounded-lg p-2"><div class="text-lg font-bold text-indigo-700">${r.numeros_asignados}</div><div class="text-xs text-gray-500">Asignados</div></div>
+                <div class="bg-gray-50 rounded-lg p-2"><div class="text-lg font-bold text-green-700">${r.numeros_pagados}</div><div class="text-xs text-gray-500">Pagados</div></div>
+                <div class="bg-gray-50 rounded-lg p-2"><div class="text-lg font-bold text-emerald-700">${moneda(r.total_recaudado)}</div><div class="text-xs text-gray-500">Recaudado</div></div>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2">
+                <div class="bg-blue-500 h-2 rounded-full" style="width:${pct}%"></div>
+            </div>
+            <div class="text-xs text-gray-400 text-right">${pct}% asignado · ${r.cant_cuotas} cuota${r.cant_cuotas>1?'s':''} de ${moneda(r.monto_cuota)} c/u · Total: ${moneda(r.monto_total)}</div>
+            <div class="flex gap-2 pt-1">
+                <button onclick="abrirPanel(${r.id_rifa})" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium">Ver números</button>
+                <button onclick="abrirModalRifa(${r.id_rifa})" class="px-3 py-1.5 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">Editar</button>
+            </div>
+        </div>`;
+    });
+}
+
+// ===== MODAL RIFA =====
+function calcMontoCuota(){
+    const total = parseFloat(document.getElementById('rifaMontoTotal').value)||0;
+    const cuotas = parseInt(document.getElementById('rifaCantCuotas').value)||1;
+    document.getElementById('rifaMontoCuota').value = cuotas > 0 ? (total/cuotas).toFixed(2) : '';
+}
+
+function cerrarModalRifa(){
+    document.getElementById('modalRifa').classList.add('hidden');
+}
+
+function abrirModalRifa(idRifa){
+    document.getElementById('rifaError').classList.add('hidden');
+    document.getElementById('rifaEstadoWrap').classList.add('hidden');
+    if(idRifa === null){
+        document.getElementById('tituloModalRifa').textContent = 'Nueva Rifa';
+        document.getElementById('rifaId').value = '';
+        document.getElementById('rifaNombre').value = '';
+        document.getElementById('rifaDescripcion').value = '';
+        document.getElementById('rifaCantNum').value = '100';
+        document.getElementById('rifaCantCuotas').value = '1';
+        document.getElementById('rifaMontoTotal').value = '';
+        document.getElementById('rifaMontoCuota').value = '';
+        document.getElementById('rifaFechaSorteo').value = '';
+        document.getElementById('rifaCuenta').value = '';
+        document.getElementById('rifaEstado').value = 'ACTIVA';
+    } else {
+        const r = rifasData.find(x=>x.id_rifa===idRifa);
+        if(!r) return;
+        document.getElementById('tituloModalRifa').textContent = 'Editar Rifa';
+        document.getElementById('rifaId').value = r.id_rifa;
+        document.getElementById('rifaNombre').value = r.nombre;
+        document.getElementById('rifaDescripcion').value = r.descripcion||'';
+        document.getElementById('rifaCantNum').value = r.cantidad_numeros;
+        document.getElementById('rifaCantCuotas').value = r.cant_cuotas;
+        document.getElementById('rifaMontoTotal').value = r.monto_total;
+        document.getElementById('rifaMontoCuota').value = r.monto_cuota;
+        document.getElementById('rifaFechaSorteo').value = r.fecha_sorteo||'';
+        document.getElementById('rifaCuenta').value = r.id_cuenta||'';
+        document.getElementById('rifaEstado').value = r.estado;
+        document.getElementById('rifaEstadoWrap').classList.remove('hidden');
+    }
+    document.getElementById('modalRifa').classList.remove('hidden');
+}
+
+async function guardarRifa(){
+    const nombre = document.getElementById('rifaNombre').value.trim();
+    const errEl = document.getElementById('rifaError');
+    errEl.classList.add('hidden');
+    if(!nombre){ errEl.textContent='El nombre es requerido'; errEl.classList.remove('hidden'); return; }
+    const cantNum = parseInt(document.getElementById('rifaCantNum').value);
+    const cantC   = parseInt(document.getElementById('rifaCantCuotas').value);
+    if(cantNum<=0||cantC<=0){ errEl.textContent='Cantidad de números y cuotas deben ser > 0'; errEl.classList.remove('hidden'); return; }
+    const payload = {
+        nombre,
+        descripcion: document.getElementById('rifaDescripcion').value,
+        fecha_sorteo: document.getElementById('rifaFechaSorteo').value,
+        cantidad_numeros: cantNum,
+        cant_cuotas: cantC,
+        monto_total: parseFloat(document.getElementById('rifaMontoTotal').value)||0,
+        monto_cuota: parseFloat(document.getElementById('rifaMontoCuota').value)||0,
+        id_cuenta: parseInt(document.getElementById('rifaCuenta').value)||0,
+        estado: document.getElementById('rifaEstado').value
+    };
+    const idRifa = document.getElementById('rifaId').value;
+    const btn = document.getElementById('btnGuardarRifa');
+    btn.disabled = true; btn.textContent = 'Guardando...';
+    try {
+        const url = idRifa ? '/api/rifas/'+idRifa : '/api/rifas';
+        const method = idRifa ? 'PUT' : 'POST';
+        const res = await fetch(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+        if(res.status===401){ window.location.href='/login'; return; }
+        const data = await res.json().catch(()=>({}));
+        if(!res.ok){ errEl.textContent=data.error||'Error'; errEl.classList.remove('hidden'); return; }
+        cerrarModalRifa();
+        cargarRifas();
+    } catch(e){
+        errEl.textContent='Error inesperado'; errEl.classList.remove('hidden');
+    } finally {
+        btn.disabled=false; btn.textContent='Guardar';
+    }
+}
+
+// ===== PANEL NÚMEROS =====
+async function abrirPanel(idRifa){
+    rifaActual = rifasData.find(r=>r.id_rifa===idRifa);
+    if(!rifaActual) return;
+    document.getElementById('tituloRifa').textContent = '&#127922; '+rifaActual.nombre;
+    document.getElementById('panelNumeros').classList.remove('hidden');
+    document.getElementById('panelNumeros').scrollIntoView({behavior:'smooth'});
+    await cargarNumeros();
+}
+
+function cerrarPanel(){
+    document.getElementById('panelNumeros').classList.add('hidden');
+    rifaActual = null;
+}
+
+async function cargarNumeros(){
+    if(!rifaActual) return;
+    const numeros = await fetch('/api/rifas/'+rifaActual.id_rifa+'/numeros').then(r=>r.json()).catch(()=>[]);
+    renderStats(numeros);
+    renderNumeros(numeros);
+}
+
+function renderStats(numeros){
+    const total    = rifaActual.cantidad_numeros;
+    const asig     = numeros.length;
+    const pagados  = numeros.filter(n=>n.estado==='PAGADO').length;
+    const parcial  = numeros.filter(n=>n.estado==='PAGADO_PARCIAL').length;
+    document.getElementById('statsRifa').innerHTML = `
+        <div class="bg-white rounded-lg shadow p-3 text-center"><div class="text-2xl font-bold text-blue-800">${total}</div><div class="text-xs text-gray-500">Total</div></div>
+        <div class="bg-white rounded-lg shadow p-3 text-center"><div class="text-2xl font-bold text-indigo-700">${asig}</div><div class="text-xs text-gray-500">Asignados</div></div>
+        <div class="bg-white rounded-lg shadow p-3 text-center"><div class="text-2xl font-bold text-yellow-600">${parcial}</div><div class="text-xs text-gray-500">Pago parcial</div></div>
+        <div class="bg-white rounded-lg shadow p-3 text-center"><div class="text-2xl font-bold text-green-700">${pagados}</div><div class="text-xs text-gray-500">Pagados</div></div>`;
+}
+
+function renderNumeros(numeros){
+    const tbody = document.getElementById('tablaNumeros');
+    const sinN  = document.getElementById('sinNumeros');
+    tbody.innerHTML = '';
+    if(!numeros.length){ sinN.classList.remove('hidden'); return; }
+    sinN.classList.add('hidden');
+    numeros.forEach(n=>{
+        const ec = n.estado==='PAGADO' ? 'bg-green-100 text-green-700'
+                 : n.estado==='PAGADO_PARCIAL' ? 'bg-yellow-100 text-yellow-700'
+                 : 'bg-blue-100 text-blue-700';
+        const titular = n.id_familia > 0
+            ? `Fam.${n.numero_familia} - ${n.nombre_tutor_principal||'-'}`
+            : `${n.nombre_externo} <span class="text-xs text-gray-400">(externo)</span>`;
+        const tel = n.id_familia > 0 ? (n.telefono_familia||'-') : (n.telefono_externo||'-');
+        tbody.innerHTML += `<tr class="hover:bg-gray-50">
+            <td class="px-4 py-2 font-bold text-blue-900 text-lg">${n.numero}</td>
+            <td class="px-4 py-2">${titular}</td>
+            <td class="px-4 py-2 text-gray-500 text-xs">${tel}</td>
+            <td class="px-4 py-2 text-center text-sm">${n.cuotas_pagadas}/${n.cant_cuotas}</td>
+            <td class="px-4 py-2 text-right font-mono text-sm">${moneda(n.saldo_pendiente)}</td>
+            <td class="px-4 py-2"><span class="px-2 py-0.5 rounded-full text-xs font-medium ${ec}">${n.estado.replace('_',' ')}</span></td>
+            <td class="px-4 py-2 flex gap-2">
+                ${n.estado!=='PAGADO'?`<button onclick="abrirCuotas(${n.id_numero},'${titular.replace(/'/g,'').replace(/<[^>]+>/g,'').trim()}')" class="text-indigo-600 hover:underline text-xs">Cuotas</button>`:''}
+                <button onclick="anularNumero(${n.id_numero})" class="text-red-400 hover:text-red-600 text-xs">Anular</button>
+            </td>
+        </tr>`;
+    });
+}
+
+// ===== ASIGNAR NÚMERO =====
+let _numerosDisponibles = [];
+
+async function abrirModalAsignar(){
+    if(!rifaActual) return;
+    document.getElementById('asigError').classList.add('hidden');
+    _numerosDisponibles = await fetch('/api/rifas/'+rifaActual.id_rifa+'/disponibles').then(r=>r.json()).catch(()=>[]);
+    const sel = document.getElementById('asigNumero');
+    sel.innerHTML = '';
+    if(!_numerosDisponibles.length){ alert('No quedan números disponibles en esta rifa.'); return; }
+    _numerosDisponibles.forEach(n=>{ sel.innerHTML += `<option value="${n}">${n}</option>`; });
+    // Poblar familias
+    const selF = document.getElementById('asigFamilia');
+    selF.innerHTML = '';
+    (familiasList||[]).forEach(f=>{ selF.innerHTML += `<option value="${f.id_familia}">${f.numero_familia} - ${f.nombre_tutor_principal||''}</option>`; });
+    switchTabAsignar('familia');
+    document.getElementById('asigNombreExt').value='';
+    document.getElementById('asigTelExt').value='';
+    document.getElementById('modalAsignar').classList.remove('hidden');
+}
+
+function switchTabAsignar(tab){
+    _tabAsignar = tab;
+    document.getElementById('panelFamilia').classList.toggle('hidden', tab!=='familia');
+    document.getElementById('panelExterno').classList.toggle('hidden', tab!=='externo');
+    document.getElementById('tabFamilia').className = tab==='familia'
+        ? 'px-4 py-2 text-sm font-medium border-b-2 border-green-600 text-green-700'
+        : 'px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700';
+    document.getElementById('tabExterno').className = tab==='externo'
+        ? 'px-4 py-2 text-sm font-medium border-b-2 border-green-600 text-green-700'
+        : 'px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700';
+}
+
+async function confirmarAsignar(){
+    const errEl = document.getElementById('asigError');
+    errEl.classList.add('hidden');
+    const numero = parseInt(document.getElementById('asigNumero').value);
+    let payload = { numero };
+    if(_tabAsignar==='familia'){
+        const idF = parseInt(document.getElementById('asigFamilia').value);
+        if(!idF){ errEl.textContent='Seleccioná una familia'; errEl.classList.remove('hidden'); return; }
+        payload.id_familia = idF;
+    } else {
+        const nom = document.getElementById('asigNombreExt').value.trim();
+        if(!nom){ errEl.textContent='El nombre es requerido'; errEl.classList.remove('hidden'); return; }
+        payload.nombre_externo   = nom;
+        payload.telefono_externo = document.getElementById('asigTelExt').value.trim();
+    }
+    const btn = document.getElementById('btnAsignar');
+    btn.disabled=true; btn.textContent='Asignando...';
+    try {
+        const res = await fetch('/api/rifas/'+rifaActual.id_rifa+'/numeros',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+        if(res.status===401){ window.location.href='/login'; return; }
+        const data = await res.json().catch(()=>({}));
+        if(!res.ok){ errEl.textContent=data.error||'Error'; errEl.classList.remove('hidden'); return; }
+        document.getElementById('modalAsignar').classList.add('hidden');
+        await cargarNumeros();
+        cargarRifas();
+    } catch(e){
+        errEl.textContent='Error inesperado'; errEl.classList.remove('hidden');
+    } finally {
+        btn.disabled=false; btn.textContent='Asignar';
+    }
+}
+
+async function asignarATodas(){
+    if(!rifaActual) return;
+    if(!confirm('¿Asignar números disponibles a todas las familias activas?')) return;
+    const res = await fetch('/api/rifas/'+rifaActual.id_rifa+'/asignar-todas',{method:'POST'});
+    if(res.status===401){ window.location.href='/login'; return; }
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok){ alert(data.error||'Error'); return; }
+    alert(data.mensaje||'Asignados: '+data.asignados);
+    await cargarNumeros();
+    cargarRifas();
+}
+
+async function anularNumero(idNumero){
+    if(!confirm('¿Anular este número? Se cancelarán sus cuotas pendientes.')) return;
+    const res = await fetch('/api/rifas/numeros/'+idNumero+'/anular',{method:'POST'});
+    const data = await res.json().catch(()=>({}));
+    if(!data.ok){ alert(data.error||'Error'); return; }
+    await cargarNumeros();
+    cargarRifas();
+}
+
+// ===== CUOTAS =====
+let _cuotasActuales = [];
+async function abrirCuotas(idNumero, titular){
+    document.getElementById('tituloCuotas').textContent = 'Cuotas — '+titular;
+    document.getElementById('cuotaError').classList.add('hidden');
+    _cuotasActuales = await fetch('/api/rifas/numeros/'+idNumero+'/cuotas').then(r=>r.json()).catch(()=>[]);
+    const lista = document.getElementById('listaCuotas');
+    lista.innerHTML = '';
+    _cuotasActuales.forEach(c=>{
+        const ec = c.estado==='PAGADA' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700';
+        const pend = c.estado==='PENDIENTE';
+        lista.innerHTML += `<div class="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
+            <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" class="cuota-sel" value="${c.id_cuota}" ${!pend?'disabled checked':''}  ${!pend?'':'checked'}>
+                <span class="text-sm font-medium">Cuota ${c.nro_cuota}</span>
+            </label>
+            <div class="flex items-center gap-3">
+                <span class="font-mono text-sm">${moneda(c.monto)}</span>
+                <span class="px-2 py-0.5 rounded-full text-xs ${ec}">${c.estado}</span>
+                ${c.fecha_pago?`<span class="text-xs text-gray-400">${c.fecha_pago.slice(0,10)}</span>`:''}
+            </div>
+        </div>`;
+    });
+    document.getElementById('modalCuotas').classList.remove('hidden');
+}
+
+async function pagarSeleccionadas(){
+    const ids = [...document.querySelectorAll('.cuota-sel:checked:not(:disabled)')].map(cb=>parseInt(cb.value));
+    const errEl = document.getElementById('cuotaError');
+    errEl.classList.add('hidden');
+    if(!ids.length){ errEl.textContent='Seleccioná al menos una cuota pendiente'; errEl.classList.remove('hidden'); return; }
+    const medio = document.getElementById('cuotaMedio').value;
+    const btn = document.getElementById('btnPagarCuotas');
+    btn.disabled=true; btn.textContent='Registrando...';
+    try {
+        const res = await fetch('/api/rifas/cuotas/pagar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cuotas:ids,medio_pago:medio})});
+        if(res.status===401){ window.location.href='/login'; return; }
+        const data = await res.json().catch(()=>({}));
+        if(!res.ok){ errEl.textContent=data.error||'Error'; errEl.classList.remove('hidden'); return; }
+        document.getElementById('modalCuotas').classList.add('hidden');
+        await cargarNumeros();
+        cargarRifas();
+    } catch(e){
+        errEl.textContent='Error inesperado'; errEl.classList.remove('hidden');
+    } finally {
+        btn.disabled=false; btn.textContent='Pagar seleccionadas';
+    }
+}
+
+// ===== IMPRIMIR CARTONES =====
+async function imprimirCartones(){
+    if(!rifaActual) return;
+    const numeros = await fetch('/api/rifas/'+rifaActual.id_rifa+'/numeros').then(r=>r.json()).catch(()=>[]);
+    if(!numeros.length){ alert('No hay números asignados para imprimir.'); return; }
+    const win = window.open('','_blank','width=900,height=700');
+    const html = buildCartones(numeros, rifaActual);
+    win.document.write(html);
+    win.document.close();
+}
+
+function buildCartones(numeros, rifa){
+    const filas = numeros.map(n=>{
+        const titular = n.id_familia > 0
+            ? `Fam.${n.numero_familia} - ${n.nombre_tutor_principal||''}`
+            : `${n.nombre_externo} (externo)`;
+        const tel = n.id_familia>0 ? n.telefono_familia : n.telefono_externo;
+        const cuotas = Array.from({length:n.cant_cuotas},(_,i)=>`
+            <div style="border:1px solid #ccc;padding:6px 10px;min-width:60px;text-align:center;">
+                <div style="font-size:9px;color:#666;">Cuota ${i+1}</div>
+                <div style="font-size:12px;font-weight:bold;">${moneda(n.monto_cuota)}</div>
+            </div>`).join('');
+        return `
+        <div style="border:2px solid #1e3a5f;border-radius:8px;padding:12px 16px;margin-bottom:14px;page-break-inside:avoid;font-family:Arial,sans-serif;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+                <div>
+                    <div style="font-size:13px;font-weight:bold;color:#1e3a5f;">${rifa.nombre}</div>
+                    <div style="font-size:11px;color:#555;">${titular}</div>
+                    ${tel?`<div style="font-size:10px;color:#888;">${tel}</div>`:''}
+                    ${rifa.fecha_sorteo?`<div style="font-size:10px;color:#888;">Sorteo: ${rifa.fecha_sorteo}</div>`:''}
+                </div>
+                <div style="text-align:center;">
+                    <div style="font-size:9px;color:#888;text-transform:uppercase;">N&deg; de rifa</div>
+                    <div style="font-size:42px;font-weight:bold;color:#1e3a5f;line-height:1;">${n.numero}</div>
+                    <div style="font-size:10px;color:#555;">Total: ${moneda(rifa.monto_total)}</div>
+                </div>
+            </div>
+            <hr style="margin:6px 0;border-color:#b0c4de;">
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">${cuotas}</div>
+        </div>`;
+    }).join('');
+    return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Cartones - ${rifa.nombre}</title>
+    <style>body{margin:0;padding:12px;}@media print{.no-print{display:none!important;}@page{margin:10mm;}}</style>
+    </head><body>
+    <div class="no-print" style="margin-bottom:14px;display:flex;gap:12px;">
+        <button onclick="window.print()" style="background:#1e40af;color:white;border:none;padding:10px 24px;border-radius:6px;cursor:pointer;">&#128438; Imprimir</button>
+        <button onclick="window.close()" style="background:#6b7280;color:white;border:none;padding:10px 24px;border-radius:6px;cursor:pointer;">Cerrar</button>
+        <span style="font-size:12px;color:#555;">${numeros.length} cartón/cartones</span>
+    </div>
+    <div style="columns:2;gap:16px;">${filas}</div>
+    </body></html>`;
+}
+
+function moneda(v){ return Number(v).toLocaleString('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}); }
+</script>
+</body>
+</html>

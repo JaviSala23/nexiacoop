@@ -29,6 +29,12 @@ public:
         std::function<void(int cantGenerados)> callback,
         std::function<void(const std::string&)> errCallback);
 
+    // Genera talones de cuota mensual para familias específicas durante N meses consecutivos
+    static void generarPeriodo(int mesInicio, int anioInicio, int numMeses,
+        std::vector<int> familiaIds,
+        std::function<void(int cantTotal)> callback,
+        std::function<void(const std::string&)> errCallback);
+
     // Código de barra mensual: NNNNNNAAAAMMCCC (N=numero_familia, A=anio, M=mes, C=id_concepto)
     static std::string generarCodigoBarra(int numeroFamilia, int anio, int mes, int idConcepto);
 };
