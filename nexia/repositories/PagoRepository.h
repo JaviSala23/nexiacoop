@@ -11,7 +11,7 @@ public:
         std::function<void(int)> callback,
         std::function<void(const std::string&)> errCallback);
 
-    static void listar(int mes, int anio, int idConcepto,
+    static void listar(int mes, int anio, int idConcepto, int idFamilia,
         std::function<void(std::vector<Pago>)> callback,
         std::function<void(const std::string&)> errCallback);
 

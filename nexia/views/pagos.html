@@ -194,8 +194,15 @@
                 <label class="text-xs text-gray-500">A&ntilde;o</label>
                 <input id="histAnio" type="number" class="mt-1 border rounded px-3 py-2 text-sm w-24">
             </div>
+            <div>
+                <label class="text-xs text-gray-500">Familia</label>
+                <select id="histFamilia" class="mt-1 border rounded px-3 py-2 text-sm w-52">
+                    <option value="">Todas las familias</option>
+                </select>
+            </div>
             <button onclick="cargarPagos()" class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded text-sm">Filtrar</button>
-            <button onclick="cargarResumenMedio()" class="bg-blue-100 hover:bg-blue-200 text-blue-800 px-4 py-2 rounded text-sm">Ver resumen por medio</button>
+            <button onclick="limpiarFiltrosHistorial()" class="text-xs text-gray-400 hover:text-gray-600 underline self-end pb-1">Limpiar</button>
+            <button onclick="cargarResumenMedio()" class="bg-blue-100 hover:bg-blue-200 text-blue-800 px-4 py-2 rounded text-sm ml-auto">Ver resumen por medio</button>
         </div>
         <div id="resumenMedios" class="grid grid-cols-4 gap-4 mb-4 hidden"></div>
         <div class="bg-white rounded-xl shadow overflow-hidden">
@@ -233,6 +240,7 @@ fetch('/api/auth/me').then(r=>r.json()).then(u=>{
     ['listAnio','histAnio'].forEach(id=>document.getElementById(id).value=anio);
     document.getElementById('codigoBarra').addEventListener('keydown',e=>{if(e.key==='Enter')registrarPagoRapido();});
     cargarConceptosListado();
+    cargarFamiliasHistorial();
 });
 
 function mostrarTab(tab){
@@ -270,6 +278,15 @@ async function cargarConceptosListado(){
     sel.innerHTML='<option value="">Todos</option>';
     (conceptos||[]).filter(c=>c.activo).forEach(c=>{
         sel.innerHTML+=`<option value="${c.id_concepto}">${c.nombre}</option>`;
+    });
+}
+
+async function cargarFamiliasHistorial(){
+    const familias=await fetch('/api/familias?estado=ACTIVA').then(r=>r.json()).catch(()=>[]);
+    const sel=document.getElementById('histFamilia');
+    sel.innerHTML='<option value="">Todas las familias</option>';
+    (familias||[]).forEach(f=>{
+        sel.innerHTML+=`<option value="${f.id_familia}">${f.numero_familia} \u2013 ${f.nombre_tutor_principal||''}</option>`;
     });
 }
 
@@ -462,8 +479,9 @@ async function verTalonesMoroso(idFamilia, numFamilia){
 async function cargarPagos(){
     const mes=document.getElementById('histMes').value;
     const anio=document.getElementById('histAnio').value;
+    const idFamilia=document.getElementById('histFamilia').value;
     const p=new URLSearchParams();
-    if(mes)p.set('mes',mes);if(anio)p.set('anio',anio);
+    if(mes)p.set('mes',mes);if(anio)p.set('anio',anio);if(idFamilia)p.set('id_familia',idFamilia);
     const data=await fetch('/api/pagos?'+p).then(r=>r.json());
     const tbody=document.getElementById('tablaPagos');
     const sinP=document.getElementById('sinPagos');
@@ -485,6 +503,13 @@ async function cargarPagos(){
             <td class="px-4 py-2 text-gray-400 text-xs">${p.observaciones||''}</td>
         </tr>`;
     });
+}
+
+function limpiarFiltrosHistorial(){
+    document.getElementById('histMes').value='';
+    document.getElementById('histAnio').value='';
+    document.getElementById('histFamilia').value='';
+    cargarPagos();
 }
 
 async function cargarResumenMedio(){

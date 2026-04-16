@@ -265,6 +265,39 @@ void RifaController::anularNumero(const drogon::HttpRequestPtr&,
         });
 }
 
+// ---------- Actualizar comprador de un número ----------
+void RifaController::actualizarNumero(const drogon::HttpRequestPtr& req,
+    std::function<void(const drogon::HttpResponsePtr&)>&& callback, int id)
+{
+    auto body = req->getJsonObject();
+    if (!body) {
+        Json::Value err; err["error"] = "JSON inválido";
+        auto r = drogon::HttpResponse::newHttpJsonResponse(err);
+        r->setStatusCode(drogon::k400BadRequest); callback(r); return;
+    }
+    int idFamilia       = (*body).get("id_familia", 0).asInt();
+    std::string nombreExt = (*body).get("nombre_externo", "").asString();
+    std::string telExt    = (*body).get("telefono_externo", "").asString();
+
+    if (idFamilia <= 0 && nombreExt.empty()) {
+        Json::Value err; err["error"] = "Se requiere familia o nombre del comprador externo";
+        auto r = drogon::HttpResponse::newHttpJsonResponse(err);
+        r->setStatusCode(drogon::k400BadRequest); callback(r); return;
+    }
+
+    RifaRepository::actualizarNumero(id, idFamilia, nombreExt, telExt,
+        [callback]() {
+            Json::Value res; res["ok"] = true;
+            callback(drogon::HttpResponse::newHttpJsonResponse(res));
+        },
+        [callback](const std::string& e) {
+            LOG_ERROR << e;
+            Json::Value err; err["error"] = e;
+            auto r = drogon::HttpResponse::newHttpJsonResponse(err);
+            r->setStatusCode(drogon::k500InternalServerError); callback(r);
+        });
+}
+
 // ---------- Listar cuotas de un número ----------
 void RifaController::listarCuotas(const drogon::HttpRequestPtr&,
     std::function<void(const drogon::HttpResponsePtr&)>&& callback, int id)
@@ -312,5 +345,62 @@ void RifaController::pagarCuotas(const drogon::HttpRequestPtr& req,
             Json::Value err; err["error"] = e;
             auto r = drogon::HttpResponse::newHttpJsonResponse(err);
             r->setStatusCode(drogon::k400BadRequest); callback(r);
+        });
+}
+
+// ---------- Sortear rifa (registrar premios y marcar como SORTEADA) ----------
+void RifaController::sortear(const drogon::HttpRequestPtr& req,
+    std::function<void(const drogon::HttpResponsePtr&)>&& callback, int id)
+{
+    auto body = req->getJsonObject();
+    if (!body) {
+        Json::Value err; err["error"] = "JSON inválido";
+        auto r = drogon::HttpResponse::newHttpJsonResponse(err);
+        r->setStatusCode(drogon::k400BadRequest); callback(r); return;
+    }
+
+    std::vector<RifaPremio> premios;
+    const Json::Value& arr = (*body)["premios"];
+    if (arr.isArray()) {
+        for (const auto& p : arr) {
+            RifaPremio rp;
+            rp.id_rifa        = id;
+            rp.orden          = p.get("orden", static_cast<int>(premios.size())+1).asInt();
+            rp.numero_ganador = p.get("numero_ganador", 0).asInt();
+            rp.nombre_ganador = p.get("nombre_ganador", "").asString();
+            rp.descripcion    = p.get("descripcion", "").asString();
+            rp.valor          = p.get("valor", 0.0).asDouble();
+            rp.fue_donado     = p.get("fue_donado", false).asBool();
+            premios.push_back(std::move(rp));
+        }
+    }
+
+    int idCuentaGasto = (*body).get("id_cuenta_gasto", 0).asInt();
+
+    RifaRepository::sortearRifa(id, premios, idCuentaGasto,
+        [callback](Json::Value resultado) {
+            callback(drogon::HttpResponse::newHttpJsonResponse(resultado));
+        },
+        [callback](const std::string& e) {
+            LOG_ERROR << e;
+            Json::Value err; err["error"] = e;
+            auto r = drogon::HttpResponse::newHttpJsonResponse(err);
+            r->setStatusCode(drogon::k500InternalServerError); callback(r);
+        });
+}
+
+// ---------- Listar premios de una rifa ----------
+void RifaController::listarPremios(const drogon::HttpRequestPtr&,
+    std::function<void(const drogon::HttpResponsePtr&)>&& callback, int id)
+{
+    RifaRepository::listarPremios(id,
+        [callback](Json::Value arr) {
+            callback(drogon::HttpResponse::newHttpJsonResponse(arr));
+        },
+        [callback](const std::string& e) {
+            LOG_ERROR << e;
+            Json::Value err; err["error"] = e;
+            auto r = drogon::HttpResponse::newHttpJsonResponse(err);
+            r->setStatusCode(drogon::k500InternalServerError); callback(r);
         });
 }

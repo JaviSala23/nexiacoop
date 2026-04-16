@@ -15,8 +15,11 @@ public:
     ADD_METHOD_TO(RifaController::asignarNumero,     "/api/rifas/{id}/numeros",            Post, "AuthFilter");
     ADD_METHOD_TO(RifaController::asignarATodas,     "/api/rifas/{id}/asignar-todas",      Post, "AuthFilter");
     ADD_METHOD_TO(RifaController::anularNumero,      "/api/rifas/numeros/{id}/anular",     Post, "AuthFilter");
+    ADD_METHOD_TO(RifaController::actualizarNumero,  "/api/rifas/numeros/{id}",            Put,  "AuthFilter");
     ADD_METHOD_TO(RifaController::listarCuotas,      "/api/rifas/numeros/{id}/cuotas",     Get,  "AuthFilter");
     ADD_METHOD_TO(RifaController::pagarCuotas,       "/api/rifas/cuotas/pagar",            Post, "AuthFilter");
+    ADD_METHOD_TO(RifaController::sortear,           "/api/rifas/{id}/sortear",            Post, "AuthFilter");
+    ADD_METHOD_TO(RifaController::listarPremios,     "/api/rifas/{id}/premios",            Get,  "AuthFilter");
     METHOD_LIST_END
 
     void pagina(const drogon::HttpRequestPtr&,
@@ -37,8 +40,14 @@ public:
                        std::function<void(const drogon::HttpResponsePtr&)>&&, int id);
     void anularNumero(const drogon::HttpRequestPtr&,
                       std::function<void(const drogon::HttpResponsePtr&)>&&, int id);
+    void actualizarNumero(const drogon::HttpRequestPtr&,
+                          std::function<void(const drogon::HttpResponsePtr&)>&&, int id);
     void listarCuotas(const drogon::HttpRequestPtr&,
                       std::function<void(const drogon::HttpResponsePtr&)>&&, int id);
     void pagarCuotas(const drogon::HttpRequestPtr&,
                      std::function<void(const drogon::HttpResponsePtr&)>&&);
+    void sortear(const drogon::HttpRequestPtr&,
+                 std::function<void(const drogon::HttpResponsePtr&)>&&, int id);
+    void listarPremios(const drogon::HttpRequestPtr&,
+                       std::function<void(const drogon::HttpResponsePtr&)>&&, int id);
 };

@@ -45,9 +45,34 @@
         <button onclick="abrirModalRifa(null)" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-medium">+ Nueva rifa</button>
     </div>
 
-    <!-- Lista de rifas -->
-    <div id="listaRifas" class="grid grid-cols-1 gap-4 mb-8"></div>
-    <p id="sinRifas" class="text-center text-gray-400 py-8 hidden">No hay rifas creadas.</p>
+    <!-- ===== Rifas Activas ===== -->
+    <div class="mb-8">
+        <h3 class="text-base font-semibold text-green-800 uppercase tracking-wide mb-3 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-green-500 inline-block"></span> Rifas Activas
+        </h3>
+        <div id="listaActivas" class="grid grid-cols-1 gap-4"></div>
+        <p id="sinActivas" class="text-center text-gray-400 py-6 hidden">No hay rifas activas.</p>
+    </div>
+
+    <!-- ===== Rifas Sorteadas ===== -->
+    <div class="mb-6">
+        <button onclick="toggleSeccion('sorteadas')" class="flex items-center gap-2 text-blue-700 font-semibold text-base uppercase tracking-wide mb-3 hover:text-blue-900">
+            <span id="iconoSorteadas" class="text-xs">&#9654;</span>
+            <span class="w-2 h-2 rounded-full bg-blue-500 inline-block"></span> Rifas Sorteadas
+            <span id="contSorteadas" class="ml-1 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-normal"></span>
+        </button>
+        <div id="listaSorteadas" class="grid grid-cols-1 gap-4 hidden"></div>
+    </div>
+
+    <!-- ===== Rifas Anuladas ===== -->
+    <div class="mb-6">
+        <button onclick="toggleSeccion('anuladas')" class="flex items-center gap-2 text-gray-500 font-semibold text-base uppercase tracking-wide mb-3 hover:text-gray-700">
+            <span id="iconoAnuladas" class="text-xs">&#9654;</span>
+            <span class="w-2 h-2 rounded-full bg-gray-400 inline-block"></span> Rifas Anuladas
+            <span id="contAnuladas" class="ml-1 text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-normal"></span>
+        </button>
+        <div id="listaAnuladas" class="grid grid-cols-1 gap-4 hidden"></div>
+    </div>
 
     <!-- Panel de números (se muestra al seleccionar una rifa) -->
     <div id="panelNumeros" class="hidden">
@@ -58,20 +83,53 @@
         <div class="flex flex-wrap gap-3 mb-4">
             <button onclick="abrirModalAsignar()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium">+ Asignar número</button>
             <button onclick="asignarATodas()" class="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-lg text-sm font-medium">&#9889; Asignar a todas las familias</button>
-            <button onclick="imprimirCartones()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium">&#128438; Imprimir cartones</button>
         </div>
 
         <!-- Stats -->
         <div id="statsRifa" class="grid grid-cols-4 gap-4 mb-5"></div>
 
-        <!-- Tabla de números -->
+        <!-- Filtros tabla -->
+        <div class="bg-white rounded-xl shadow p-4 mb-4 flex flex-wrap gap-3 items-end">
+            <div>
+                <label class="text-xs text-gray-500 block mb-1">Buscar</label>
+                <input id="filtBuscar" type="text" placeholder="N\u00famero o titular..." class="border rounded px-3 py-1.5 text-sm w-44" oninput="aplicarFiltros()">
+            </div>
+            <div>
+                <label class="text-xs text-gray-500 block mb-1">Estado</label>
+                <select id="filtEstado" class="border rounded px-3 py-1.5 text-sm" onchange="aplicarFiltros()">
+                    <option value="">Todos</option>
+                    <option value="ASIGNADO">Asignado</option>
+                    <option value="PAGADO_PARCIAL">Pago parcial</option>
+                    <option value="PAGADO">Pagado</option>
+                </select>
+            </div>
+            <div>
+                <label class="text-xs text-gray-500 block mb-1">Cuotas</label>
+                <select id="filtCuotas" class="border rounded px-3 py-1.5 text-sm" onchange="aplicarFiltros()">
+                    <option value="">Todas</option>
+                    <option value="pendientes">Con pendientes</option>
+                    <option value="completo">Completamente pagado</option>
+                </select>
+            </div>
+            <div>
+                <label class="text-xs text-gray-500 block mb-1">Fecha desde</label>
+                <input id="filtFechaDesde" type="date" class="border rounded px-3 py-1.5 text-sm" onchange="aplicarFiltros()">
+            </div>
+            <div>
+                <label class="text-xs text-gray-500 block mb-1">Fecha hasta</label>
+                <input id="filtFechaHasta" type="date" class="border rounded px-3 py-1.5 text-sm" onchange="aplicarFiltros()">
+            </div>
+            <button onclick="limpiarFiltros()" class="text-xs text-gray-400 hover:text-gray-600 underline self-end pb-1.5">Limpiar filtros</button>
+            <span id="contFiltrados" class="text-xs text-gray-400 self-end pb-1.5 ml-auto"></span>
+        </div>
+
+        <!-- Tabla de n\u00fameros -->
         <div class="bg-white rounded-xl shadow overflow-hidden">
             <table class="w-full text-sm">
                 <thead class="bg-blue-50 text-blue-800">
                     <tr>
                         <th class="px-4 py-3 text-left">N&uacute;m.</th>
-                        <th class="px-4 py-3 text-left">Titular</th>
-                        <th class="px-4 py-3 text-left">Tel&eacute;fono</th>
+                        <th class="px-4 py-3 text-left">Titular / Tel&eacute;f. / Fecha</th>
                         <th class="px-4 py-3 text-center">Cuotas</th>
                         <th class="px-4 py-3 text-right">Saldo pend.</th>
                         <th class="px-4 py-3 text-left">Estado</th>
@@ -80,7 +138,17 @@
                 </thead>
                 <tbody id="tablaNumeros" class="divide-y divide-gray-100"></tbody>
             </table>
-            <p id="sinNumeros" class="text-center text-gray-400 py-6 hidden">No hay números asignados.</p>
+            <p id="sinNumeros" class="text-center text-gray-400 py-6 hidden">No hay n\u00fameros asignados.</p>
+        </div>
+
+        <!-- Paginaci\u00f3n -->
+        <div id="paginacion" class="flex items-center justify-between mt-4 hidden">
+            <span id="infoPagina" class="text-sm text-gray-500"></span>
+            <div class="flex gap-2 items-center">
+                <button onclick="irPagina(_paginaActual-1)" id="btnPrev" class="px-3 py-1.5 border rounded text-sm hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">&#8592; Ant.</button>
+                <div id="numsPagina" class="flex gap-1"></div>
+                <button onclick="irPagina(_paginaActual+1)" id="btnNext" class="px-3 py-1.5 border rounded text-sm hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">Sig. &#8594;</button>
+            </div>
         </div>
     </div>
 </main>
@@ -211,12 +279,94 @@
     </div>
 </div>
 
+<!-- ===== MODAL SORTEO ===== -->
+<div id="modalSorteo" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-8 max-h-[90vh] overflow-y-auto">
+        <h3 class="text-xl font-bold text-yellow-800 mb-1">&#127922; Sortear Rifa</h3>
+        <p id="sorteoSubtitulo" class="text-sm text-gray-400 mb-5"></p>
+        <input type="hidden" id="sorteoIdRifa">
+
+        <!-- Premios -->
+        <div class="mb-4">
+            <div class="flex items-center justify-between mb-3">
+                <h4 class="font-semibold text-gray-700 text-sm uppercase tracking-wide">Premios / Ganadores</h4>
+                <button onclick="agregarPremioFila()" class="text-sm bg-yellow-100 hover:bg-yellow-200 text-yellow-800 px-3 py-1 rounded-lg font-medium">+ Agregar premio</button>
+            </div>
+            <div id="listaPremisos" class="space-y-3"></div>
+            <p class="text-xs text-gray-400 mt-2">Pod\u00e9s dejar los premios vac\u00edos si solo quer\u00e9s cerrar la rifa.</p>
+        </div>
+
+        <hr class="my-4 border-gray-200">
+
+        <!-- Registro contable -->
+        <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
+            <h4 class="font-semibold text-amber-800 text-sm mb-3">&#128200; Registro en Contabilidad</h4>
+            <p class="text-xs text-gray-500 mb-3">Los premios con valor que no sean donados se registrar\u00e1n como <strong>egreso</strong> en la cuenta seleccionada.</p>
+            <div>
+                <label class="text-xs text-gray-500 block mb-1">Cuenta de egreso (gastos de rifa)</label>
+                <select id="sorteoCuenta" class="w-full border rounded px-3 py-2 text-sm" onchange="actualizarBalance()">
+                    <option value="">&#8212; No registrar en contabilidad &#8212;</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Balance resumen (se actualiza dinámicamente) -->
+        <div id="sorteoBalance" class="bg-gray-50 rounded-xl p-4 mb-4 text-sm hidden">
+            <h4 class="font-semibold text-gray-700 mb-2">Balance del sorteo</h4>
+            <div id="sorteoBalanceDetalle"></div>
+        </div>
+
+        <div id="sorteoError" class="text-red-600 text-sm mb-3 hidden"></div>
+        <div class="flex justify-end gap-3">
+            <button onclick="document.getElementById('modalSorteo').classList.add('hidden')" class="px-5 py-2 border rounded-lg text-gray-600">Cancelar</button>
+            <button onclick="confirmarSorteo()" id="btnConfirmarSorteo" class="px-5 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-medium">&#127922; Confirmar Sorteo</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== MODAL EDITAR COMPRADOR ===== -->
+<div id="modalComprador" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
+        <h3 class="text-xl font-bold text-purple-800 mb-1">Editar Comprador</h3>
+        <p id="compradorSubtitulo" class="text-sm text-gray-400 mb-5"></p>
+        <input type="hidden" id="compradorIdNumero">
+        <!-- Tabs -->
+        <div class="flex border-b mb-5">
+            <button id="tabCompradorFam" onclick="switchTabComprador('familia')" class="px-4 py-2 text-sm font-medium border-b-2 border-purple-600 text-purple-700">Familia</button>
+            <button id="tabCompradorExt" onclick="switchTabComprador('externo')" class="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">Externo</button>
+        </div>
+        <div id="panelCompradorFam" class="space-y-3">
+            <label class="text-xs text-gray-500">Familia *</label>
+            <select id="compradorFamilia" class="mt-1 w-full border rounded px-3 py-2 text-sm"></select>
+        </div>
+        <div id="panelCompradorExt" class="space-y-3 hidden">
+            <div>
+                <label class="text-xs text-gray-500">Nombre *</label>
+                <input id="compradorNombre" type="text" class="mt-1 w-full border rounded px-3 py-2 text-sm">
+            </div>
+            <div>
+                <label class="text-xs text-gray-500">Tel&eacute;fono</label>
+                <input id="compradorTel" type="text" class="mt-1 w-full border rounded px-3 py-2 text-sm">
+            </div>
+        </div>
+        <div id="compradorError" class="text-red-600 text-sm mt-3 hidden"></div>
+        <div class="flex justify-end gap-3 mt-6">
+            <button onclick="document.getElementById('modalComprador').classList.add('hidden')" class="px-5 py-2 border rounded-lg text-gray-600">Cancelar</button>
+            <button onclick="guardarComprador()" id="btnGuardarComprador" class="px-5 py-2 bg-purple-600 text-white rounded-lg font-medium">Guardar</button>
+        </div>
+    </div>
+</div>
+
 <script>
 let rifasData = [];
 let rifaActual = null;
 let familiasList = [];
 let cuentasList = [];
 let _tabAsignar = 'familia';
+let _numerosAll = [];
+let _paginaActual = 1;
+const _porPagina = 25;
+let _tabComprador = 'familia';
 
 async function logout(){ await fetch('/api/auth/logout',{method:'POST'}); window.location.href='/login'; }
 
@@ -248,18 +398,48 @@ async function cargarRifas(){
 const moneda = v => Number(v).toLocaleString('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0});
 
 function renderRifas(){
-    const cont = document.getElementById('listaRifas');
-    const sinR = document.getElementById('sinRifas');
+    const activas   = rifasData.filter(r=>r.estado==='ACTIVA');
+    const sorteadas = rifasData.filter(r=>r.estado==='SORTEADA');
+    const anuladas  = rifasData.filter(r=>r.estado==='CERRADA');
+
+    renderGrupo(activas,   'listaActivas',   'sinActivas',  'activa');
+    renderGrupo(sorteadas, 'listaSorteadas', null,          'sorteada');
+    renderGrupo(anuladas,  'listaAnuladas',  null,          'anulada');
+
+    document.getElementById('contSorteadas').textContent = sorteadas.length ? sorteadas.length : '';
+    document.getElementById('contAnuladas').textContent  = anuladas.length  ? anuladas.length  : '';
+}
+
+function renderGrupo(rifas, contId, sinId, tipo){
+    const cont = document.getElementById(contId);
     cont.innerHTML = '';
-    if(!rifasData.length){ sinR.classList.remove('hidden'); return; }
-    sinR.classList.add('hidden');
-    rifasData.forEach(r=>{
-        const ec = r.estado==='ACTIVA' ? 'bg-green-100 text-green-700'
-                 : r.estado==='SORTEADA' ? 'bg-blue-100 text-blue-700'
+    if(sinId){
+        document.getElementById(sinId).classList.toggle('hidden', rifas.length > 0);
+    }
+    rifas.forEach(r=>{
+        const ec = tipo==='activa'   ? 'bg-green-100 text-green-700'
+                 : tipo==='sorteada' ? 'bg-blue-100 text-blue-700'
                  : 'bg-gray-100 text-gray-500';
         const pct = r.cantidad_numeros > 0 ? Math.round(r.numeros_asignados/r.cantidad_numeros*100) : 0;
+
+        let acciones = '';
+        if(tipo==='activa'){
+            acciones = `
+            <div class="flex flex-wrap gap-2 pt-1">
+                <button onclick="abrirPanel(${r.id_rifa})" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium">Ver n\u00fameros</button>
+                <button onclick="abrirModalRifa(${r.id_rifa})" class="px-3 py-1.5 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">Editar</button>
+                <button onclick="sortearRifa(${r.id_rifa},'${r.nombre.replace(/'/g,"\\'")}')" class="px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-sm font-medium">&#127922; Sortear</button>
+                <button onclick="anularRifa(${r.id_rifa},'${r.nombre.replace(/'/g,"\\'")}')" class="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium">&#10005; Anular</button>
+            </div>`;
+        } else if(tipo==='sorteada'){
+            acciones = `
+            <div class="flex gap-2 pt-1">
+                <button onclick="abrirPanel(${r.id_rifa})" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium">Ver n\u00fameros</button>
+            </div>`;
+        }
+
         cont.innerHTML += `
-        <div class="bg-white rounded-xl shadow p-5 flex flex-col gap-3">
+        <div class="bg-white rounded-xl shadow p-5 flex flex-col gap-3 ${tipo==='anulada'?'opacity-60':''}">
             <div class="flex items-start justify-between">
                 <div>
                     <h4 class="text-lg font-bold text-blue-900">${r.nombre}</h4>
@@ -269,7 +449,7 @@ function renderRifas(){
                 <span class="px-3 py-1 rounded-full text-xs font-medium ${ec}">${r.estado}</span>
             </div>
             <div class="grid grid-cols-4 gap-3 text-center">
-                <div class="bg-gray-50 rounded-lg p-2"><div class="text-lg font-bold text-blue-800">${r.cantidad_numeros}</div><div class="text-xs text-gray-500">Números totales</div></div>
+                <div class="bg-gray-50 rounded-lg p-2"><div class="text-lg font-bold text-blue-800">${r.cantidad_numeros}</div><div class="text-xs text-gray-500">N\u00fameros totales</div></div>
                 <div class="bg-gray-50 rounded-lg p-2"><div class="text-lg font-bold text-indigo-700">${r.numeros_asignados}</div><div class="text-xs text-gray-500">Asignados</div></div>
                 <div class="bg-gray-50 rounded-lg p-2"><div class="text-lg font-bold text-green-700">${r.numeros_pagados}</div><div class="text-xs text-gray-500">Pagados</div></div>
                 <div class="bg-gray-50 rounded-lg p-2"><div class="text-lg font-bold text-emerald-700">${moneda(r.total_recaudado)}</div><div class="text-xs text-gray-500">Recaudado</div></div>
@@ -277,13 +457,31 @@ function renderRifas(){
             <div class="w-full bg-gray-200 rounded-full h-2">
                 <div class="bg-blue-500 h-2 rounded-full" style="width:${pct}%"></div>
             </div>
-            <div class="text-xs text-gray-400 text-right">${pct}% asignado · ${r.cant_cuotas} cuota${r.cant_cuotas>1?'s':''} de ${moneda(r.monto_cuota)} c/u · Total: ${moneda(r.monto_total)}</div>
-            <div class="flex gap-2 pt-1">
-                <button onclick="abrirPanel(${r.id_rifa})" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium">Ver números</button>
-                <button onclick="abrirModalRifa(${r.id_rifa})" class="px-3 py-1.5 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">Editar</button>
-            </div>
+            <div class="text-xs text-gray-400 text-right">${pct}% asignado &middot; ${r.cant_cuotas} cuota${r.cant_cuotas>1?'s':''} de ${moneda(r.monto_cuota)} c/u &middot; Total: ${moneda(r.monto_total)}</div>
+            ${acciones}
         </div>`;
     });
+}
+
+function toggleSeccion(cual){
+    const lista  = document.getElementById('lista'+cual.charAt(0).toUpperCase()+cual.slice(1));
+    const icono  = document.getElementById('icono'+cual.charAt(0).toUpperCase()+cual.slice(1));
+    const oculto = lista.classList.toggle('hidden');
+    icono.innerHTML = oculto ? '&#9654;' : '&#9660;';
+}
+
+function sortearRifa(idRifa, nombre){
+    // Abre el modal de sorteo en lugar de confirmar directamente
+    abrirModalSorteo(idRifa, nombre);
+}
+
+async function anularRifa(idRifa, nombre){
+    if(!confirm(`\u00bfAnular la rifa "${nombre}"?\nNo se eliminar\u00e1 permanentemente, quedar\u00e1 en la secci\u00f3n de Anuladas.`)) return;
+    const res = await fetch('/api/rifas/'+idRifa,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({estado:'CERRADA'})});
+    if(res.status===401){ window.location.href='/login'; return; }
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok){ alert(data.error||'Error al anular'); return; }
+    cargarRifas();
 }
 
 // ===== MODAL RIFA =====
@@ -373,10 +571,47 @@ async function guardarRifa(){
 async function abrirPanel(idRifa){
     rifaActual = rifasData.find(r=>r.id_rifa===idRifa);
     if(!rifaActual) return;
-    document.getElementById('tituloRifa').textContent = '&#127922; '+rifaActual.nombre;
+    document.getElementById('tituloRifa').textContent = '\u{1F3B2} '+rifaActual.nombre;
     document.getElementById('panelNumeros').classList.remove('hidden');
     document.getElementById('panelNumeros').scrollIntoView({behavior:'smooth'});
     await cargarNumeros();
+    if(rifaActual.estado==='SORTEADA') await cargarPremiosPanel();
+    else document.getElementById('panelPremios')?.remove();
+}
+
+async function cargarPremiosPanel(){
+    const premios = await fetch('/api/rifas/'+rifaActual.id_rifa+'/premios').then(r=>r.json()).catch(()=>[]);
+    if(!premios.length) return;
+    // Quitar si ya existe
+    document.getElementById('panelPremios')?.remove();
+    const div = document.createElement('div');
+    div.id = 'panelPremios';
+    div.className = 'mt-6 bg-yellow-50 border border-yellow-200 rounded-xl p-5';
+    const filas = premios.map(p=>{
+        const valorStr = p.valor>0 ? moneda(p.valor) : '-';
+        const egreso   = p.id_movimiento>0 ? '<span class="text-xs text-red-500 ml-1">(egreso registrado)</span>' : '';
+        const donado   = p.fue_donado ? '<span class="text-xs text-gray-400 ml-1">(donado)</span>' : '';
+        return `<tr class="border-t border-yellow-100">
+            <td class="py-2 px-3 font-bold text-yellow-800">${p.orden}\u00ba</td>
+            <td class="py-2 px-3">${p.numero_ganador||'-'}</td>
+            <td class="py-2 px-3">${p.nombre_ganador||'-'}</td>
+            <td class="py-2 px-3">${p.descripcion||'-'}</td>
+            <td class="py-2 px-3 font-mono">${valorStr}${donado}${egreso}</td>
+        </tr>`;
+    }).join('');
+    div.innerHTML = `
+        <h4 class="font-bold text-yellow-800 mb-3">\u{1F3B2} Premios del sorteo</h4>
+        <table class="w-full text-sm">
+            <thead><tr class="text-left text-xs text-yellow-600 uppercase">
+                <th class="px-3 py-1">Lugar</th>
+                <th class="px-3 py-1">N\u00famero</th>
+                <th class="px-3 py-1">Ganador</th>
+                <th class="px-3 py-1">Premio</th>
+                <th class="px-3 py-1">Valor</th>
+            </tr></thead>
+            <tbody>${filas}</tbody>
+        </table>`;
+    document.getElementById('panelNumeros').appendChild(div);
 }
 
 function cerrarPanel(){
@@ -387,8 +622,149 @@ function cerrarPanel(){
 async function cargarNumeros(){
     if(!rifaActual) return;
     const numeros = await fetch('/api/rifas/'+rifaActual.id_rifa+'/numeros').then(r=>r.json()).catch(()=>[]);
+    _numerosAll = numeros;
     renderStats(numeros);
-    renderNumeros(numeros);
+    _paginaActual = 1;
+    aplicarFiltros();
+}
+
+function aplicarFiltros(){
+    const buscar    = (document.getElementById('filtBuscar').value||'').toLowerCase();
+    const estado    = document.getElementById('filtEstado').value;
+    const cuotas    = document.getElementById('filtCuotas').value;
+    const fechaDesde= document.getElementById('filtFechaDesde').value;
+    const fechaHasta= document.getElementById('filtFechaHasta').value;
+
+    let lista = _numerosAll.filter(n=>{
+        if(estado && n.estado !== estado) return false;
+        if(cuotas === 'pendientes' && n.cuotas_pendientes <= 0) return false;
+        if(cuotas === 'completo'   && n.estado !== 'PAGADO') return false;
+        const fecha = n.fecha_asignacion ? n.fecha_asignacion.slice(0,10) : '';
+        if(fechaDesde && fecha < fechaDesde) return false;
+        if(fechaHasta && fecha > fechaHasta) return false;
+        if(buscar){
+            const numStr   = String(n.numero);
+            const titular  = n.id_familia > 0
+                ? (n.nombre_tutor_principal||'').toLowerCase()
+                : (n.nombre_externo||'').toLowerCase();
+            if(!numStr.includes(buscar) && !titular.includes(buscar)) return false;
+        }
+        return true;
+    });
+
+    document.getElementById('contFiltrados').textContent =
+        lista.length < _numerosAll.length
+            ? lista.length+' de '+_numerosAll.length+' resultados'
+            : lista.length+' registros';
+
+    renderNumerosPagedo(lista);
+}
+
+function limpiarFiltros(){
+    document.getElementById('filtBuscar').value='';
+    document.getElementById('filtEstado').value='';
+    document.getElementById('filtCuotas').value='';
+    document.getElementById('filtFechaDesde').value='';
+    document.getElementById('filtFechaHasta').value='';
+    _paginaActual = 1;
+    aplicarFiltros();
+}
+
+function renderNumerosPagedo(lista){
+    const total    = lista.length;
+    const totalPag = Math.max(1, Math.ceil(total / _porPagina));
+    if(_paginaActual > totalPag) _paginaActual = totalPag;
+    const desde = (_paginaActual-1)*_porPagina;
+    const pagina = lista.slice(desde, desde+_porPagina);
+
+    // Renderizar filas
+    const tbody = document.getElementById('tablaNumeros');
+    const sinN  = document.getElementById('sinNumeros');
+    tbody.innerHTML = '';
+    if(!pagina.length){ sinN.classList.remove('hidden'); }
+    else {
+        sinN.classList.add('hidden');
+        pagina.forEach(n=>{
+            const ec = n.estado==='PAGADO' ? 'bg-green-100 text-green-700'
+                     : n.estado==='PAGADO_PARCIAL' ? 'bg-yellow-100 text-yellow-700'
+                     : 'bg-blue-100 text-blue-700';
+            const titular = n.id_familia > 0
+                ? `Fam.${n.numero_familia} \u2013 ${n.nombre_tutor_principal||'-'}`
+                : `${n.nombre_externo} <span class="text-xs text-gray-400">(ext.)</span>`;
+            const tel = n.id_familia > 0 ? (n.telefono_familia||'-') : (n.telefono_externo||'-');
+            const fechaCorta = n.fecha_asignacion ? n.fecha_asignacion.slice(0,10) : '-';
+            tbody.innerHTML += `<tr class="hover:bg-gray-50">
+                <td class="px-4 py-2 font-bold text-blue-900 text-lg">${n.numero}</td>
+                <td class="px-4 py-2">
+                    <div>${titular}</div>
+                    <div class="text-xs text-gray-400">${tel}</div>
+                    <div class="text-xs text-gray-300">${fechaCorta}</div>
+                </td>
+                <td class="px-4 py-2 text-center text-sm">${n.cuotas_pagadas}/${n.cant_cuotas}</td>
+                <td class="px-4 py-2 text-right font-mono text-sm">${moneda(n.saldo_pendiente)}</td>
+                <td class="px-4 py-2"><span class="px-2 py-0.5 rounded-full text-xs font-medium ${ec}">${n.estado.replace('_',' ')}</span></td>
+                <td class="px-4 py-2">
+                    <div class="flex flex-wrap gap-2 items-center">
+                        ${n.estado!=='PAGADO'?`<button onclick="abrirCuotas(${n.id_numero},'${(n.id_familia>0?n.nombre_tutor_principal:n.nombre_externo).replace(/'/g,"\\'")}')" class="text-indigo-600 hover:underline text-xs font-medium">Cuotas</button>`:''}
+                        <button onclick="abrirEditarComprador(${n.id_numero})" class="text-purple-500 hover:underline text-xs font-medium">Comprador</button>
+                        <button onclick="anularNumero(${n.id_numero})" class="text-red-400 hover:text-red-600 text-xs">Anular</button>
+                    </div>
+                </td>
+            </tr>`;
+        });
+    }
+
+    // Paginaci\u00f3n
+    const pagDiv = document.getElementById('paginacion');
+    if(totalPag <= 1){ pagDiv.classList.add('hidden'); return; }
+    pagDiv.classList.remove('hidden');
+    document.getElementById('infoPagina').textContent =
+        `P\u00e1gina ${_paginaActual} de ${totalPag} \u00b7 ${total} registros`;
+    document.getElementById('btnPrev').disabled = _paginaActual <= 1;
+    document.getElementById('btnNext').disabled = _paginaActual >= totalPag;
+    // N\u00fameros de p\u00e1gina (m\u00e1x 7 botones)
+    const numsEl = document.getElementById('numsPagina');
+    numsEl.innerHTML = '';
+    let start = Math.max(1, _paginaActual-3);
+    let end   = Math.min(totalPag, start+6);
+    if(end-start < 6) start = Math.max(1, end-6);
+    for(let p=start; p<=end; p++){
+        const btn = document.createElement('button');
+        btn.textContent = p;
+        btn.className = p===_paginaActual
+            ? 'w-8 h-8 rounded text-sm bg-blue-600 text-white font-bold'
+            : 'w-8 h-8 rounded text-sm border hover:bg-gray-50';
+        btn.onclick = ()=>irPagina(p);
+        numsEl.appendChild(btn);
+    }
+}
+
+function irPagina(p){
+    const filtered = _numerosAll.filter(n=>{
+        const buscar    = (document.getElementById('filtBuscar').value||'').toLowerCase();
+        const estado    = document.getElementById('filtEstado').value;
+        const cuotas    = document.getElementById('filtCuotas').value;
+        const fechaDesde= document.getElementById('filtFechaDesde').value;
+        const fechaHasta= document.getElementById('filtFechaHasta').value;
+        if(estado && n.estado !== estado) return false;
+        if(cuotas === 'pendientes' && n.cuotas_pendientes <= 0) return false;
+        if(cuotas === 'completo'   && n.estado !== 'PAGADO') return false;
+        const fecha = n.fecha_asignacion ? n.fecha_asignacion.slice(0,10) : '';
+        if(fechaDesde && fecha < fechaDesde) return false;
+        if(fechaHasta && fecha > fechaHasta) return false;
+        if(buscar){
+            const numStr  = String(n.numero);
+            const titular = n.id_familia > 0
+                ? (n.nombre_tutor_principal||'').toLowerCase()
+                : (n.nombre_externo||'').toLowerCase();
+            if(!numStr.includes(buscar) && !titular.includes(buscar)) return false;
+        }
+        return true;
+    });
+    const totalPag = Math.max(1, Math.ceil(filtered.length/_porPagina));
+    _paginaActual = Math.min(Math.max(1,p), totalPag);
+    renderNumerosPagedo(filtered);
+    document.getElementById('panelNumeros').scrollIntoView({behavior:'smooth'});
 }
 
 function renderStats(numeros){
@@ -401,35 +777,6 @@ function renderStats(numeros){
         <div class="bg-white rounded-lg shadow p-3 text-center"><div class="text-2xl font-bold text-indigo-700">${asig}</div><div class="text-xs text-gray-500">Asignados</div></div>
         <div class="bg-white rounded-lg shadow p-3 text-center"><div class="text-2xl font-bold text-yellow-600">${parcial}</div><div class="text-xs text-gray-500">Pago parcial</div></div>
         <div class="bg-white rounded-lg shadow p-3 text-center"><div class="text-2xl font-bold text-green-700">${pagados}</div><div class="text-xs text-gray-500">Pagados</div></div>`;
-}
-
-function renderNumeros(numeros){
-    const tbody = document.getElementById('tablaNumeros');
-    const sinN  = document.getElementById('sinNumeros');
-    tbody.innerHTML = '';
-    if(!numeros.length){ sinN.classList.remove('hidden'); return; }
-    sinN.classList.add('hidden');
-    numeros.forEach(n=>{
-        const ec = n.estado==='PAGADO' ? 'bg-green-100 text-green-700'
-                 : n.estado==='PAGADO_PARCIAL' ? 'bg-yellow-100 text-yellow-700'
-                 : 'bg-blue-100 text-blue-700';
-        const titular = n.id_familia > 0
-            ? `Fam.${n.numero_familia} - ${n.nombre_tutor_principal||'-'}`
-            : `${n.nombre_externo} <span class="text-xs text-gray-400">(externo)</span>`;
-        const tel = n.id_familia > 0 ? (n.telefono_familia||'-') : (n.telefono_externo||'-');
-        tbody.innerHTML += `<tr class="hover:bg-gray-50">
-            <td class="px-4 py-2 font-bold text-blue-900 text-lg">${n.numero}</td>
-            <td class="px-4 py-2">${titular}</td>
-            <td class="px-4 py-2 text-gray-500 text-xs">${tel}</td>
-            <td class="px-4 py-2 text-center text-sm">${n.cuotas_pagadas}/${n.cant_cuotas}</td>
-            <td class="px-4 py-2 text-right font-mono text-sm">${moneda(n.saldo_pendiente)}</td>
-            <td class="px-4 py-2"><span class="px-2 py-0.5 rounded-full text-xs font-medium ${ec}">${n.estado.replace('_',' ')}</span></td>
-            <td class="px-4 py-2 flex gap-2">
-                ${n.estado!=='PAGADO'?`<button onclick="abrirCuotas(${n.id_numero},'${titular.replace(/'/g,'').replace(/<[^>]+>/g,'').trim()}')" class="text-indigo-600 hover:underline text-xs">Cuotas</button>`:''}
-                <button onclick="anularNumero(${n.id_numero})" class="text-red-400 hover:text-red-600 text-xs">Anular</button>
-            </td>
-        </tr>`;
-    });
 }
 
 // ===== ASIGNAR NÚMERO =====
@@ -614,10 +961,210 @@ function buildCartones(numeros, rifa){
     <div class="no-print" style="margin-bottom:14px;display:flex;gap:12px;">
         <button onclick="window.print()" style="background:#1e40af;color:white;border:none;padding:10px 24px;border-radius:6px;cursor:pointer;">&#128438; Imprimir</button>
         <button onclick="window.close()" style="background:#6b7280;color:white;border:none;padding:10px 24px;border-radius:6px;cursor:pointer;">Cerrar</button>
-        <span style="font-size:12px;color:#555;">${numeros.length} cartón/cartones</span>
+        <span style="font-size:12px;color:#555;">${numeros.length} cart\u00f3n/cartones</span>
     </div>
     <div style="columns:2;gap:16px;">${filas}</div>
     </body></html>`;
+}
+
+// ===== MODAL SORTEO =====
+let _sorteoIdRifa = null;
+let _sorteoPremioCount = 0;
+
+async function abrirModalSorteo(idRifa, nombre){
+    _sorteoIdRifa = idRifa;
+    _sorteoPremioCount = 0;
+    document.getElementById('sorteoIdRifa').value = idRifa;
+    document.getElementById('sorteoSubtitulo').textContent = nombre;
+    document.getElementById('sorteoError').classList.add('hidden');
+    document.getElementById('listaPremisos').innerHTML = '';
+    document.getElementById('sorteoBalance').classList.add('hidden');
+
+    // Poblar cuentas de egreso
+    const sel = document.getElementById('sorteoCuenta');
+    sel.innerHTML = '<option value="">\u2014 No registrar en contabilidad \u2014</option>';
+    (cuentasList||[]).filter(c=>c.activo && c.tipo==='EGRESO').forEach(c=>{
+        sel.innerHTML += `<option value="${c.id_cuenta}">${c.codigo} - ${c.nombre}</option>`;
+    });
+
+    // Agregar una fila de premio inicial vacía
+    agregarPremioFila();
+
+    document.getElementById('modalSorteo').classList.remove('hidden');
+}
+
+function agregarPremioFila(){
+    _sorteoPremioCount++;
+    const idx = _sorteoPremioCount;
+    const div = document.createElement('div');
+    div.id = 'premioFila'+idx;
+    div.className = 'flex flex-wrap gap-2 items-end bg-gray-50 rounded-xl p-3 relative';
+    div.innerHTML = `
+        <div>
+            <label class="text-xs text-gray-500 block mb-1">${idx}\u00ba Premio</label>
+            <input type="text" id="premioDesc${idx}" placeholder="Descripci\u00f3n del premio"
+                class="border rounded px-3 py-1.5 text-sm w-52" oninput="actualizarBalance()">
+        </div>
+        <div>
+            <label class="text-xs text-gray-500 block mb-1">N\u00famero ganador</label>
+            <input type="number" id="premioNum${idx}" placeholder="Ej: 42" min="1"
+                class="border rounded px-3 py-1.5 text-sm w-28">
+        </div>
+        <div>
+            <label class="text-xs text-gray-500 block mb-1">Nombre ganador</label>
+            <input type="text" id="premioNombre${idx}" placeholder="Nombre opcional"
+                class="border rounded px-3 py-1.5 text-sm w-44">
+        </div>
+        <div>
+            <label class="text-xs text-gray-500 block mb-1">Valor del premio</label>
+            <input type="number" id="premioValor${idx}" placeholder="0.00" min="0" step="0.01"
+                class="border rounded px-3 py-1.5 text-sm w-32" oninput="actualizarBalance()">
+        </div>
+        <div class="flex items-center gap-1.5 pb-1">
+            <input type="checkbox" id="premioDonado${idx}" onchange="actualizarBalance()">
+            <label for="premioDonado${idx}" class="text-xs text-gray-500 cursor-pointer">Donado</label>
+        </div>
+        <button onclick="document.getElementById('premioFila${idx}').remove(); actualizarBalance()"
+            class="absolute top-2 right-2 text-gray-300 hover:text-red-400 text-lg leading-none">&times;</button>`;
+    document.getElementById('listaPremisos').appendChild(div);
+}
+
+function obtenerPremios(){
+    const filas = document.querySelectorAll('[id^="premioFila"]');
+    const premios = [];
+    filas.forEach((fila, i) => {
+        const idx = fila.id.replace('premioFila','');
+        const desc   = (document.getElementById('premioDesc'+idx)?.value||'').trim();
+        const num    = parseInt(document.getElementById('premioNum'+idx)?.value)||0;
+        const nombre = (document.getElementById('premioNombre'+idx)?.value||'').trim();
+        const valor  = parseFloat(document.getElementById('premioValor'+idx)?.value)||0;
+        const donado = document.getElementById('premioDonado'+idx)?.checked||false;
+        premios.push({ orden: i+1, descripcion: desc, numero_ganador: num,
+                       nombre_ganador: nombre, valor, fue_donado: donado });
+    });
+    return premios;
+}
+
+function actualizarBalance(){
+    const premios = obtenerPremios();
+    const idCuenta = parseInt(document.getElementById('sorteoCuenta').value)||0;
+    const conEgreso = premios.filter(p=>!p.fue_donado && p.valor>0 && idCuenta>0);
+    const donados   = premios.filter(p=>p.fue_donado);
+    const totalEgreso = conEgreso.reduce((s,p)=>s+p.valor,0);
+    const totalDonado = donados.reduce((s,p)=>s+p.valor,0);
+    const totalGeneral = premios.reduce((s,p)=>s+p.valor,0);
+
+    const balDiv = document.getElementById('sorteoBalance');
+    if(!premios.length || !premios.some(p=>p.descripcion||p.valor)){ balDiv.classList.add('hidden'); return; }
+    balDiv.classList.remove('hidden');
+    document.getElementById('sorteoBalanceDetalle').innerHTML = `
+        <div class="grid grid-cols-3 gap-3 text-center">
+            <div class="bg-white rounded-lg p-2 border">
+                <div class="text-base font-bold text-gray-800">${premios.length}</div>
+                <div class="text-xs text-gray-500">Premios</div>
+            </div>
+            <div class="bg-white rounded-lg p-2 border">
+                <div class="text-base font-bold text-red-600">${moneda(totalEgreso)}</div>
+                <div class="text-xs text-gray-500">Se registra como egreso</div>
+            </div>
+            <div class="bg-white rounded-lg p-2 border">
+                <div class="text-base font-bold text-gray-400">${moneda(totalDonado)}</div>
+                <div class="text-xs text-gray-500">Donado (sin egreso)</div>
+            </div>
+        </div>
+        ${totalGeneral>0?`<div class="text-right text-xs text-gray-400 mt-2">Total premios: ${moneda(totalGeneral)}</div>`:''}`;
+}
+
+async function confirmarSorteo(){
+    const errEl = document.getElementById('sorteoError');
+    errEl.classList.add('hidden');
+    const premios = obtenerPremios().filter(p=>p.descripcion||p.valor||p.numero_ganador);
+    const idCuenta = parseInt(document.getElementById('sorteoCuenta').value)||0;
+    const btn = document.getElementById('btnConfirmarSorteo');
+    btn.disabled=true; btn.textContent='Procesando...';
+    try {
+        const res = await fetch('/api/rifas/'+_sorteoIdRifa+'/sortear',{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ premios, id_cuenta_gasto: idCuenta })
+        });
+        if(res.status===401){ window.location.href='/login'; return; }
+        const data = await res.json().catch(()=>({}));
+        if(!res.ok){ errEl.textContent=data.error||'Error'; errEl.classList.remove('hidden'); return; }
+        document.getElementById('modalSorteo').classList.add('hidden');
+        cargarRifas();
+    } catch(e){
+        errEl.textContent='Error inesperado'; errEl.classList.remove('hidden');
+    } finally {
+        btn.disabled=false; btn.textContent='\u{1F3B2} Confirmar Sorteo';
+    }
+}
+
+// ===== EDITAR COMPRADOR =====
+function abrirEditarComprador(idNumero){
+    const n = _numerosAll.find(x=>x.id_numero===idNumero);
+    if(!n) return;
+    document.getElementById('compradorIdNumero').value = idNumero;
+    document.getElementById('compradorError').classList.add('hidden');
+    document.getElementById('compradorSubtitulo').textContent = 'N\u00famero ' + n.numero + ' \u2013 ' + rifaActual.nombre;
+
+    // Poblar familias
+    const selF = document.getElementById('compradorFamilia');
+    selF.innerHTML = '';
+    (familiasList||[]).forEach(f=>{
+        selF.innerHTML += `<option value="${f.id_familia}" ${f.id_familia===n.id_familia?'selected':''}>${f.numero_familia} - ${f.nombre_tutor_principal||''}</option>`;
+    });
+
+    if(n.id_familia > 0){
+        switchTabComprador('familia');
+    } else {
+        switchTabComprador('externo');
+        document.getElementById('compradorNombre').value = n.nombre_externo||'';
+        document.getElementById('compradorTel').value    = n.telefono_externo||'';
+    }
+    document.getElementById('modalComprador').classList.remove('hidden');
+}
+
+function switchTabComprador(tab){
+    _tabComprador = tab;
+    document.getElementById('panelCompradorFam').classList.toggle('hidden', tab!=='familia');
+    document.getElementById('panelCompradorExt').classList.toggle('hidden', tab!=='externo');
+    document.getElementById('tabCompradorFam').className = tab==='familia'
+        ? 'px-4 py-2 text-sm font-medium border-b-2 border-purple-600 text-purple-700'
+        : 'px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700';
+    document.getElementById('tabCompradorExt').className = tab==='externo'
+        ? 'px-4 py-2 text-sm font-medium border-b-2 border-purple-600 text-purple-700'
+        : 'px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700';
+}
+
+async function guardarComprador(){
+    const errEl    = document.getElementById('compradorError');
+    const idNumero = parseInt(document.getElementById('compradorIdNumero').value);
+    errEl.classList.add('hidden');
+    let payload = {};
+    if(_tabComprador==='familia'){
+        const idF = parseInt(document.getElementById('compradorFamilia').value);
+        if(!idF){ errEl.textContent='Seleccion\u00e1 una familia'; errEl.classList.remove('hidden'); return; }
+        payload = { id_familia: idF };
+    } else {
+        const nom = document.getElementById('compradorNombre').value.trim();
+        if(!nom){ errEl.textContent='El nombre es requerido'; errEl.classList.remove('hidden'); return; }
+        payload = { nombre_externo: nom, telefono_externo: document.getElementById('compradorTel').value.trim() };
+    }
+    const btn = document.getElementById('btnGuardarComprador');
+    btn.disabled=true; btn.textContent='Guardando...';
+    try {
+        const res = await fetch('/api/rifas/numeros/'+idNumero,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+        if(res.status===401){ window.location.href='/login'; return; }
+        const data = await res.json().catch(()=>({}));
+        if(!res.ok){ errEl.textContent=data.error||'Error'; errEl.classList.remove('hidden'); return; }
+        document.getElementById('modalComprador').classList.add('hidden');
+        await cargarNumeros();
+    } catch(e){
+        errEl.textContent='Error inesperado'; errEl.classList.remove('hidden');
+    } finally {
+        btn.disabled=false; btn.textContent='Guardar';
+    }
 }
 
 </script>

@@ -38,12 +38,13 @@ void PagoController::registrar(const drogon::HttpRequestPtr& req,
 void PagoController::listar(const drogon::HttpRequestPtr& req,
     std::function<void(const drogon::HttpResponsePtr&)>&& callback)
 {
-    int mes = 0, anio = 0, idConcepto = 0;
+    int mes = 0, anio = 0, idConcepto = 0, idFamilia = 0;
     auto m = req->getParameter("mes");       if (!m.empty()) mes = std::stoi(m);
     auto a = req->getParameter("anio");      if (!a.empty()) anio = std::stoi(a);
     auto c = req->getParameter("id_concepto"); if (!c.empty()) idConcepto = std::stoi(c);
+    auto f = req->getParameter("id_familia");  if (!f.empty()) idFamilia = std::stoi(f);
 
-    PagoRepository::listar(mes, anio, idConcepto,
+    PagoRepository::listar(mes, anio, idConcepto, idFamilia,
         [callback](std::vector<Pago> lista) {
             Json::Value arr(Json::arrayValue);
             for (const auto& p : lista) {

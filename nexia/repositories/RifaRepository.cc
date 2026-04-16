@@ -431,3 +431,167 @@ void RifaRepository::pagarCuotas(const std::vector<int>& idCuotas, const std::st
         },
         [errCallback](const DrogonDbException& e) { errCallback(e.base().what()); });
 }
+
+void RifaRepository::actualizarNumero(int idNumero, int idFamilia,
+    const std::string& nombreExt, const std::string& telExt,
+    std::function<void()> callback,
+    std::function<void(const std::string&)> errCallback)
+{
+    auto db = app().getDbClient("main");
+    db->execSqlAsync(
+        "UPDATE rifa_numeros SET "
+        "id_familia=NULLIF(?,0), "
+        "nombre_externo=NULLIF(?,''), "
+        "telefono_externo=NULLIF(?,'') "
+        "WHERE id_numero=?",
+        [callback](const Result&) { callback(); },
+        [errCallback](const DrogonDbException& e) { errCallback(e.base().what()); },
+        idFamilia, nombreExt, telExt, idNumero);
+}
+
+// -------------------------------------------------------
+// SORTEO / PREMIOS
+// -------------------------------------------------------
+void RifaRepository::sortearRifa(int idRifa, const std::vector<RifaPremio>& premios,
+    int idCuentaGasto,
+    std::function<void(Json::Value)> callback,
+    std::function<void(const std::string&)> errCallback)
+{
+    if (premios.empty()) {
+        // Sin premios: solo cambiar estado
+        auto db = app().getDbClient("main");
+        db->execSqlAsync("UPDATE rifas SET estado='SORTEADA' WHERE id_rifa=?",
+            [callback](const Result&) {
+                Json::Value res; res["ok"] = true; res["movimientos_creados"] = 0;
+                callback(res);
+            },
+            [errCallback](const DrogonDbException& e) { errCallback(e.base().what()); },
+            idRifa);
+        return;
+    }
+
+    auto db = app().getDbClient("main");
+
+    // Obtener nombre de la rifa para la descripción
+    db->execSqlAsync("SELECT nombre FROM rifas WHERE id_rifa=?",
+        [db, idRifa, premios, idCuentaGasto, callback, errCallback](const Result& rs) {
+            if (rs.empty()) { errCallback("Rifa no encontrada"); return; }
+            std::string nombreRifa = rs[0]["nombre"].as<std::string>();
+
+            // Separar premios donados y con gasto
+            std::vector<RifaPremio> conGasto;
+            for (const auto& p : premios)
+                if (!p.fue_donado && p.valor > 0.0 && idCuentaGasto > 0)
+                    conGasto.push_back(p);
+
+            int movCreados = 0;
+            std::shared_ptr<int> pendientes = std::make_shared<int>(static_cast<int>(conGasto.size()));
+
+            // Función que inserta los premios una vez resueltos los movimientos
+            auto insertarPremios = [db, idRifa, premios, movCreados, callback, errCallback]
+                (std::vector<int> idMovs) mutable {
+                if (premios.empty()) {
+                    db->execSqlAsync("UPDATE rifas SET estado='SORTEADA' WHERE id_rifa=?",
+                        [movCreados, callback](const Result&) {
+                            Json::Value res; res["ok"] = true;
+                            res["movimientos_creados"] = movCreados;
+                            callback(res);
+                        },
+                        [errCallback](const DrogonDbException& e) { errCallback(e.base().what()); },
+                        idRifa);
+                    return;
+                }
+                // Construir INSERT múltiple de premios
+                std::string sql = "INSERT INTO rifa_premios "
+                    "(id_rifa,orden,numero_ganador,nombre_ganador,descripcion,valor,fue_donado,id_movimiento) VALUES ";
+                int movIdx = 0;
+                for (size_t i = 0; i < premios.size(); i++) {
+                    if (i > 0) sql += ",";
+                    int idMov = 0;
+                    if (!premios[i].fue_donado && premios[i].valor > 0.0 && movIdx < (int)idMovs.size()) {
+                        idMov = idMovs[movIdx++];
+                    }
+                    sql += "(" + std::to_string(idRifa) + ","
+                        + std::to_string(premios[i].orden) + ","
+                        + (premios[i].numero_ganador > 0 ? std::to_string(premios[i].numero_ganador) : "NULL") + ","
+                        + "'" + premios[i].nombre_ganador + "',"
+                        + "'" + premios[i].descripcion + "',"
+                        + std::to_string(premios[i].valor) + ","
+                        + std::to_string(premios[i].fue_donado ? 1 : 0) + ","
+                        + (idMov > 0 ? std::to_string(idMov) : "NULL") + ")";
+                }
+                db->execSqlAsync(sql,
+                    [db, idRifa, movCreados, callback, errCallback](const Result&) {
+                        db->execSqlAsync("UPDATE rifas SET estado='SORTEADA' WHERE id_rifa=?",
+                            [movCreados, callback](const Result&) {
+                                Json::Value res; res["ok"] = true;
+                                res["movimientos_creados"] = movCreados;
+                                callback(res);
+                            },
+                            [errCallback](const DrogonDbException& e) { errCallback(e.base().what()); },
+                            idRifa);
+                    },
+                    [errCallback](const DrogonDbException& e) { errCallback(e.base().what()); });
+            };
+
+            if (conGasto.empty()) {
+                insertarPremios({});
+                return;
+            }
+
+            // Crear movimientos de egreso para premios con valor no donados
+            auto idMovs = std::make_shared<std::vector<int>>();
+            auto restantes = std::make_shared<int>(static_cast<int>(conGasto.size()));
+            bool errored = false;
+            for (const auto& p : conGasto) {
+                std::string desc = "Premio rifa " + nombreRifa + " - " + p.descripcion;
+                db->execSqlAsync(
+                    "INSERT INTO movimientos (id_cuenta,fecha,descripcion,monto,tipo,medio_pago) "
+                    "VALUES (?,NOW(),?,?,'EGRESO','EFECTIVO')",
+                    [idMovs, restantes, insertarPremios, &movCreados](const Result& r) mutable {
+                        idMovs->push_back(static_cast<int>(r.insertId()));
+                        movCreados++;
+                        (*restantes)--;
+                        if (*restantes == 0) insertarPremios(*idMovs);
+                    },
+                    [errCallback, &errored](const DrogonDbException& e) {
+                        if (!errored) { errored = true; errCallback(e.base().what()); }
+                    },
+                    idCuentaGasto, desc, p.valor);
+            }
+        },
+        [errCallback](const DrogonDbException& e) { errCallback(e.base().what()); },
+        idRifa);
+}
+
+void RifaRepository::listarPremios(int idRifa,
+    std::function<void(Json::Value)> callback,
+    std::function<void(const std::string&)> errCallback)
+{
+    auto db = app().getDbClient("main");
+    db->execSqlAsync(
+        "SELECT p.*, m.fecha AS fecha_movimiento "
+        "FROM rifa_premios p "
+        "LEFT JOIN movimientos m ON p.id_movimiento=m.id_movimiento "
+        "WHERE p.id_rifa=? ORDER BY p.orden",
+        [callback](const Result& rs) {
+            Json::Value arr(Json::arrayValue);
+            for (const auto& row : rs) {
+                Json::Value o;
+                o["id_premio"]       = row["id_premio"].as<int>();
+                o["id_rifa"]         = row["id_rifa"].as<int>();
+                o["orden"]           = row["orden"].as<int>();
+                o["numero_ganador"]  = row["numero_ganador"].isNull() ? 0 : row["numero_ganador"].as<int>();
+                o["nombre_ganador"]  = row["nombre_ganador"].isNull() ? "" : row["nombre_ganador"].as<std::string>();
+                o["descripcion"]     = row["descripcion"].isNull() ? "" : row["descripcion"].as<std::string>();
+                o["valor"]           = row["valor"].as<double>();
+                o["fue_donado"]      = row["fue_donado"].as<bool>();
+                o["id_movimiento"]   = row["id_movimiento"].isNull() ? 0 : row["id_movimiento"].as<int>();
+                o["fecha_movimiento"]= row["fecha_movimiento"].isNull() ? "" : row["fecha_movimiento"].as<std::string>();
+                arr.append(o);
+            }
+            callback(arr);
+        },
+        [errCallback](const DrogonDbException& e) { errCallback(e.base().what()); },
+        idRifa);
+}

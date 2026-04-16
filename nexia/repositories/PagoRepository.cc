@@ -17,7 +17,7 @@ void PagoRepository::insertar(const Pago& p,
         p.id_talon, p.monto, p.medio_pago, p.observaciones);
 }
 
-void PagoRepository::listar(int mes, int anio, int idConcepto,
+void PagoRepository::listar(int mes, int anio, int idConcepto, int idFamilia,
     std::function<void(std::vector<Pago>)> callback,
     std::function<void(const std::string&)> errCallback)
 {
@@ -33,9 +33,10 @@ void PagoRepository::listar(int mes, int anio, int idConcepto,
         "JOIN conceptos c ON t.id_concepto=c.id_concepto "
         "LEFT JOIN tutores tp ON tp.id_familia=f.id_familia AND tp.es_principal=1 "
         "WHERE 1=1 ";
-    if (mes > 0)       sql += "AND t.mes="  + std::to_string(mes)  + " ";
-    if (anio > 0)      sql += "AND t.anio=" + std::to_string(anio) + " ";
+    if (mes > 0)        sql += "AND t.mes="  + std::to_string(mes)       + " ";
+    if (anio > 0)       sql += "AND t.anio=" + std::to_string(anio)      + " ";
     if (idConcepto > 0) sql += "AND t.id_concepto=" + std::to_string(idConcepto) + " ";
+    if (idFamilia > 0)  sql += "AND f.id_familia=" + std::to_string(idFamilia)  + " ";
     sql += "ORDER BY pg.fecha_pago DESC";
 
     db->execSqlAsync(sql,
