@@ -119,6 +119,15 @@
             <tbody id="tablaTalones" class="divide-y divide-gray-100"></tbody>
         </table>
         <p id="sinResultados" class="text-center text-gray-400 py-8 hidden">Sin resultados para el filtro seleccionado</p>
+        <!-- Paginación -->
+        <div id="paginacionWrap" class="flex items-center justify-between px-4 py-3 border-t hidden">
+            <span id="paginInfoTexto" class="text-sm text-gray-500"></span>
+            <div class="flex items-center gap-1">
+                <button id="paginPrev" onclick="cambiarPagina(-1)" class="px-3 py-1 rounded border text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50">&laquo; Anterior</button>
+                <span id="paginNumeros" class="flex gap-1"></span>
+                <button id="paginNext" onclick="cambiarPagina(1)" class="px-3 py-1 rounded border text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50">Siguiente &raquo;</button>
+            </div>
+        </div>
     </div>
 </main>
 
@@ -281,16 +290,18 @@
         <div class="mb-4">
             <div class="flex justify-between items-center mb-1">
                 <label class="text-xs text-gray-500">Familias *</label>
-                <label class="flex items-center gap-1 text-xs text-gray-500 cursor-pointer">
-                    <input type="checkbox" id="periodoSelTodas" onchange="togglePeriodoTodas(this.checked)"> Seleccionar todas
-                </label>
+                <button type="button" onclick="periodoAgregarTodas()" class="text-xs text-orange-600 hover:underline">+ Agregar todas</button>
             </div>
-            <div id="periodoFamiliasWrap" class="border rounded-lg max-h-48 overflow-y-auto">
-                <table class="w-full text-sm">
-                    <tbody id="periodoFamiliasList"></tbody>
-                </table>
+            <!-- Autocomplete -->
+            <div class="relative mb-2">
+                <input id="periodoFamBuscar" type="text" placeholder="Buscar por n&uacute;mero o tutor..." autocomplete="off"
+                    class="w-full border rounded px-3 py-2 text-sm"
+                    oninput="periodoFiltrarSugerencias()" onfocus="periodoFiltrarSugerencias()">
+                <ul id="periodoSugerencias" class="absolute z-10 bg-white border rounded-lg shadow-lg w-full max-h-48 overflow-y-auto hidden text-sm"></ul>
             </div>
-            <div id="periodoFamiliasLoading" class="text-center text-gray-400 text-sm py-3">Cargando familias...</div>
+            <!-- Chips seleccionados -->
+            <div id="periodoChips" class="flex flex-wrap gap-1 min-h-[32px] border rounded-lg p-2 bg-gray-50 empty:before:content-['Ninguna_familia_seleccionada'] empty:before:text-gray-400 empty:before:text-xs"></div>
+            <div id="periodoFamiliasLoading" class="text-center text-gray-400 text-sm py-2 hidden">Cargando familias...</div>
         </div>
         <div id="periodoError" class="text-red-600 text-sm mt-2 hidden"></div>
         <div id="periodoMsg" class="text-green-700 text-sm mt-2 hidden"></div>
@@ -321,6 +332,8 @@
 <script>
 let talonesData = [];
 let nombreInstitucion = '';
+const PAGINA_SIZE = 50;
+let paginaActual = 1;
 const meses = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const mesesCortos = ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
@@ -369,17 +382,25 @@ async function cargarTalones(){
     if(conc)p.set('id_concepto',conc);
     const data=await fetch('/api/talones?'+p).then(r=>r.json());
     talonesData=(Array.isArray(data)?data:[]).filter(t=>!est||t.estado===est);
+    paginaActual = 1;
     renderTabla();
 }
 
 function renderTabla(){
     const tbody=document.getElementById('tablaTalones');
     const sinRes=document.getElementById('sinResultados');
+    const paginWrap=document.getElementById('paginacionWrap');
     tbody.innerHTML='';
     document.getElementById('selTodos').checked=false;
-    if(!talonesData.length){sinRes.classList.remove('hidden');return;}
+    if(!talonesData.length){sinRes.classList.remove('hidden');paginWrap.classList.add('hidden');return;}
     sinRes.classList.add('hidden');
-    talonesData.forEach(t=>{
+    const total=talonesData.length;
+    const totalPag=Math.ceil(total/PAGINA_SIZE);
+    if(paginaActual>totalPag)paginaActual=totalPag;
+    const inicio=(paginaActual-1)*PAGINA_SIZE;
+    const fin=Math.min(inicio+PAGINA_SIZE,total);
+    const pagina=talonesData.slice(inicio,fin);
+    pagina.forEach(t=>{
         const ec=t.estado==='PAGADO'?'bg-green-100 text-green-700':t.estado==='ANULADO'?'bg-gray-100 text-gray-400':'bg-yellow-100 text-yellow-700';
         const periodo=t.mes?(mesesCortos[t.mes]+' '+t.anio):(t.anio||'');
         const monto=Number(t.monto).toLocaleString('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0});
@@ -401,6 +422,41 @@ function renderTabla(){
             </td>
         </tr>`;
     });
+    // Controles de paginación
+    if(total<=PAGINA_SIZE){
+        paginWrap.classList.add('hidden');
+    } else {
+        paginWrap.classList.remove('hidden');
+        const totalPag2=Math.ceil(total/PAGINA_SIZE);
+        document.getElementById('paginInfoTexto').textContent=`Mostrando ${inicio+1}-${fin} de ${total}`;
+        document.getElementById('paginPrev').disabled=(paginaActual===1);
+        document.getElementById('paginNext').disabled=(paginaActual===totalPag2);
+        // Numeración de páginas (máx 7 botones)
+        const nums=document.getElementById('paginNumeros');
+        nums.innerHTML='';
+        const ventana=3;
+        for(let i=1;i<=totalPag2;i++){
+            if(i===1||i===totalPag2||Math.abs(i-paginaActual)<=ventana){
+                const btn=document.createElement('button');
+                btn.textContent=i;
+                btn.className='px-2.5 py-1 rounded border text-sm '+(i===paginaActual?'bg-blue-600 text-white border-blue-600':'hover:bg-gray-50');
+                btn.onclick=()=>{paginaActual=i;renderTabla();};
+                nums.appendChild(btn);
+            } else if(Math.abs(i-paginaActual)===ventana+1){
+                const sp=document.createElement('span');
+                sp.textContent='…';
+                sp.className='px-1 py-1 text-sm text-gray-400';
+                nums.appendChild(sp);
+            }
+        }
+    }
+}
+
+function cambiarPagina(dir){
+    const total=talonesData.length;
+    const totalPag=Math.ceil(total/PAGINA_SIZE);
+    paginaActual=Math.max(1,Math.min(totalPag,paginaActual+dir));
+    renderTabla();
 }
 
 function toggleSeleccionarTodos(checked){
@@ -810,50 +866,99 @@ function imprimirUno(id){
 }
 
 // ── Modal Generar Período ────────────────────────────────────────────
+let _periodoFamiliasTodas = [];   // cache de todas las familias activas
+let _periodoSeleccionadas = new Map(); // id_familia -> objeto familia
+
 async function abrirModalPeriodo() {
     const modal = document.getElementById('modalPeriodo');
-    // Valores por defecto: mes actual, año actual
     const hoy = new Date();
     document.getElementById('periodoMes').value = hoy.getMonth() + 1;
     document.getElementById('periodoAnio').value = hoy.getFullYear();
-    // Resetear radios
     document.querySelectorAll('input[name="periodoMeses"]').forEach(r => r.checked = false);
     document.querySelector('input[name="periodoMeses"][value="3"]').checked = true;
-    document.getElementById('periodoSelTodas').checked = false;
     document.getElementById('periodoError').classList.add('hidden');
     document.getElementById('periodoMsg').classList.add('hidden');
     document.getElementById('btnGenerarPeriodo').disabled = false;
-    // Cargar familias
-    const wrap = document.getElementById('periodoFamiliasWrap');
-    const loading = document.getElementById('periodoFamiliasLoading');
-    const lista = document.getElementById('periodoFamiliasList');
-    wrap.classList.add('hidden');
-    loading.classList.remove('hidden');
-    lista.innerHTML = '';
+    document.getElementById('periodoFamBuscar').value = '';
+    document.getElementById('periodoSugerencias').classList.add('hidden');
+    _periodoSeleccionadas = new Map();
+    renderPeriodoChips();
     modal.classList.remove('hidden');
-    try {
-        const familias = await fetch('/api/familias?estado=ACTIVA').then(r => r.json());
-        lista.innerHTML = (familias || []).map(f =>
-            `<tr class="border-b last:border-0 hover:bg-gray-50">
-                <td class="px-3 py-1.5"><input type="checkbox" class="periodo-fam-sel" value="${f.id_familia}"></td>
-                <td class="px-3 py-1.5 font-bold">${f.numero_familia}</td>
-                <td class="px-3 py-1.5">${f.nombre_tutor_principal || ''}</td>
-            </tr>`
-        ).join('');
+    // Cargar familias solo si no tenemos cache
+    if (!_periodoFamiliasTodas.length) {
+        const loading = document.getElementById('periodoFamiliasLoading');
+        loading.classList.remove('hidden');
+        try {
+            _periodoFamiliasTodas = await fetch('/api/familias?estado=ACTIVA').then(r => r.json()) || [];
+        } catch(e) { _periodoFamiliasTodas = []; }
         loading.classList.add('hidden');
-        wrap.classList.remove('hidden');
-    } catch(e) {
-        loading.textContent = 'Error al cargar familias.';
     }
 }
 
 function cerrarModalPeriodo() {
     document.getElementById('modalPeriodo').classList.add('hidden');
+    document.getElementById('periodoSugerencias').classList.add('hidden');
 }
 
-function togglePeriodoTodas(checked) {
-    document.querySelectorAll('.periodo-fam-sel').forEach(cb => cb.checked = checked);
+function periodoFiltrarSugerencias() {
+    const q = document.getElementById('periodoFamBuscar').value.trim().toLowerCase();
+    const ul = document.getElementById('periodoSugerencias');
+    if (!q) { ul.classList.add('hidden'); return; }
+    const matches = _periodoFamiliasTodas
+        .filter(f => !_periodoSeleccionadas.has(f.id_familia))
+        .filter(f => String(f.numero_familia).includes(q) ||
+                     (f.nombre_tutor_principal||'').toLowerCase().includes(q))
+        .slice(0, 12);
+    if (!matches.length) { ul.classList.add('hidden'); return; }
+    ul.innerHTML = matches.map(f =>
+        `<li class="px-3 py-2 hover:bg-orange-50 cursor-pointer flex justify-between" onclick="periodoAgregarFamilia(${f.id_familia})">
+            <span class="font-bold text-gray-700">${f.numero_familia}</span>
+            <span class="text-gray-500 truncate ml-2">${f.nombre_tutor_principal||''}</span>
+        </li>`
+    ).join('');
+    ul.classList.remove('hidden');
 }
+
+function periodoAgregarFamilia(idFamilia) {
+    const f = _periodoFamiliasTodas.find(x => x.id_familia === idFamilia);
+    if (!f) return;
+    _periodoSeleccionadas.set(idFamilia, f);
+    document.getElementById('periodoFamBuscar').value = '';
+    document.getElementById('periodoSugerencias').classList.add('hidden');
+    renderPeriodoChips();
+}
+
+function periodoAgregarTodas() {
+    _periodoFamiliasTodas.forEach(f => _periodoSeleccionadas.set(f.id_familia, f));
+    document.getElementById('periodoFamBuscar').value = '';
+    document.getElementById('periodoSugerencias').classList.add('hidden');
+    renderPeriodoChips();
+}
+
+function periodoQuitarFamilia(idFamilia) {
+    _periodoSeleccionadas.delete(idFamilia);
+    renderPeriodoChips();
+}
+
+function renderPeriodoChips() {
+    const container = document.getElementById('periodoChips');
+    if (!_periodoSeleccionadas.size) {
+        container.innerHTML = '<span class="text-gray-400 text-xs">Ninguna familia seleccionada</span>';
+        return;
+    }
+    container.innerHTML = [..._periodoSeleccionadas.values()].map(f =>
+        `<span class="inline-flex items-center gap-1 bg-orange-100 text-orange-800 text-xs px-2 py-0.5 rounded-full">
+            <b>${f.numero_familia}</b> ${(f.nombre_tutor_principal||'').split(' ').slice(0,2).join(' ')}
+            <button type="button" onclick="periodoQuitarFamilia(${f.id_familia})" class="ml-0.5 text-orange-500 hover:text-red-600 font-bold leading-none">&times;</button>
+        </span>`
+    ).join('');
+}
+
+// Cerrar sugerencias al hacer clic fuera
+document.addEventListener('click', e => {
+    if (!e.target.closest('#periodoFamBuscar') && !e.target.closest('#periodoSugerencias'))
+        document.getElementById('periodoSugerencias')?.classList.add('hidden');
+});
 
 async function ejecutarGenerarPeriodo() {
     const mesInicio = parseInt(document.getElementById('periodoMes').value);
@@ -871,10 +976,10 @@ async function ejecutarGenerarPeriodo() {
         errEl.textContent = 'Seleccioná la cantidad de meses.'; errEl.classList.remove('hidden'); return;
     }
     const numMeses = parseInt(numMesesEl.value);
-    const selIds = [...document.querySelectorAll('.periodo-fam-sel:checked')].map(cb => parseInt(cb.value));
-    if (!selIds.length) {
+    if (!_periodoSeleccionadas.size) {
         errEl.textContent = 'Seleccioná al menos una familia.'; errEl.classList.remove('hidden'); return;
     }
+    const selIds = [..._periodoSeleccionadas.keys()];
 
     const btn = document.getElementById('btnGenerarPeriodo');
     btn.disabled = true;
